@@ -1373,26 +1373,31 @@
       appScreen.classList.remove("hidden");
     }
 
-    async function api(path, options = {}) {
-      const response = await fetch(path, {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.headers || {})
-        },
-        ...options
-      });
+  const API_BASE =
+  location.hostname === "localhost"
+    ? "http://localhost:3000"
+    : "https://auth.lukintosh.com";
 
-      const data = await response.json().catch(() => ({}));
+async function api(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    ...options
+  });
 
-      if (!response.ok) {
-        const error = new Error(data.error || "Erro na API");
-        error.payload = data;
-        throw error;
-      }
+  const data = await response.json().catch(() => ({}));
 
-      return data;
-    }
+  if (!response.ok) {
+    const error = new Error(data.error || "Erro na API");
+    error.payload = data;
+    throw error;
+  }
+
+  return data;
+}
 
     function setMode(mode) {
       state.mode = mode;
