@@ -52,7 +52,9 @@
     }
 
     button,
-    input {
+    input,
+    select,
+    textarea {
       font: inherit;
     }
 
@@ -186,7 +188,8 @@
       color: #050507;
     }
 
-    form {
+    form,
+    .email-code-box {
       display: grid;
       gap: 12px;
     }
@@ -345,6 +348,29 @@
       width: 18px;
       height: 18px;
       display: block;
+    }
+
+    .email-code-box {
+      margin-top: 18px;
+    }
+
+    .email-code-box h2 {
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: -0.06em;
+    }
+
+    .email-code-box p {
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    #emailCodeInput {
+      text-align: center;
+      font-size: 28px;
+      letter-spacing: 0.22em;
+      font-weight: 900;
     }
 
     .legal-links {
@@ -950,6 +976,28 @@
         </div>
       </form>
 
+      <section id="emailCodeBox" class="email-code-box hidden">
+        <h2>Verifique seu e-mail</h2>
+        <p id="emailCodeText">Enviamos um código de 6 dígitos para o seu e-mail.</p>
+
+        <label>
+          Código de verificação
+          <input
+            id="emailCodeInput"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="000000"
+          >
+        </label>
+
+        <div class="form-actions">
+          <button class="btn primary" id="verifyEmailCodeButton" type="button">Verificar código</button>
+          <button class="btn" id="backToLoginButton" type="button">Voltar</button>
+        </div>
+      </section>
+
       <div class="oauth-divider">
         <span></span>
         <p>ou entre com</p>
@@ -966,7 +1014,7 @@
           Apple
         </a>
 
-      <a class="oauth-btn" href="https://auth.lukintosh.com/auth/google?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Google">
+        <a class="oauth-btn" href="https://auth.lukintosh.com/auth/google?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Google">
           <span class="oauth-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -978,7 +1026,7 @@
           Google
         </a>
 
-  <a class="oauth-btn" href="https://auth.lukintosh.com/auth/microsoft?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Microsoft">
+        <a class="oauth-btn" href="https://auth.lukintosh.com/auth/microsoft?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Microsoft">
           <span class="oauth-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#F25022" d="M1 1h10v10H1z"/>
@@ -990,7 +1038,7 @@
           Microsoft
         </a>
 
-    <a class="oauth-btn" href="https://auth.lukintosh.com/auth/github?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com GitHub">
+        <a class="oauth-btn" href="https://auth.lukintosh.com/auth/github?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com GitHub">
           <span class="oauth-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#f5f5f7" d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.16c-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.04 1.77 2.72 1.26 3.38.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18A10.97 10.97 0 0 1 12 6.02c.98 0 1.97.13 2.89.39 2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.42-2.69 5.39-5.25 5.67.42.36.79 1.08.79 2.18v3.15c0 .31.21.68.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
@@ -1012,7 +1060,7 @@
 
   <div id="appScreen" class="app hidden">
     <aside class="sidebar">
-      <a href="/" class="brand">
+      <a href="https://lukintosh.com" class="brand">
         <div class="mark"></div>
         <div>
           <strong>Lukintosh Accounts</strong>
@@ -1163,8 +1211,8 @@
 
             <article class="card">
               <div class="card-icon">⌁</div>
-              <h3>Passkeys</h3>
-              <p>Próxima fase: WebAuthn/passkeys para login sem senha.</p>
+              <h3>Security alerts</h3>
+              <p>E-mails de novo login e códigos de 6 dígitos via Lukintosh Accounts.</p>
             </article>
           </div>
 
@@ -1277,6 +1325,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
+    const API_BASE = "https://auth.lukintosh.com";
+
     if (window.location.hash.includes("access_token")) {
       window.history.replaceState({}, document.title, window.location.pathname);
       alert("O login voltou em modo token. Ajuste o backend para PKCE e tente novamente.");
@@ -1289,7 +1339,9 @@
       sessions: [],
       mfa: null,
       currentMfaFactorId: null,
-      currentVerifiedMfaFactorId: null
+      currentVerifiedMfaFactorId: null,
+      pendingEmailChallenge: null,
+      pendingEmailForCode: null
     };
 
     const loadingScreen = document.querySelector("#loadingScreen");
@@ -1307,6 +1359,12 @@
     const displayNameInput = document.querySelector("#displayNameInput");
     const emailInput = document.querySelector("#emailInput");
     const passwordInput = document.querySelector("#passwordInput");
+
+    const emailCodeBox = document.querySelector("#emailCodeBox");
+    const emailCodeText = document.querySelector("#emailCodeText");
+    const emailCodeInput = document.querySelector("#emailCodeInput");
+    const verifyEmailCodeButton = document.querySelector("#verifyEmailCodeButton");
+    const backToLoginButton = document.querySelector("#backToLoginButton");
 
     const logoutButton = document.querySelector("#logoutButton");
     const refreshButton = document.querySelector("#refreshButton");
@@ -1348,6 +1406,14 @@
         return "Código 2FA inválido. Aguarde mudar no app e tente novamente.";
       }
 
+      if (text.toLowerCase().includes("invalid_code")) {
+        return "Código inválido ou expirado.";
+      }
+
+      if (text.toLowerCase().includes("email_code_required")) {
+        return "Digite o código enviado para seu e-mail.";
+      }
+
       if (text.toLowerCase().includes("factor with the friendly name")) {
         return "Já existe um fator 2FA com esse nome. O backend precisa usar nome único ou remover o fator antigo.";
       }
@@ -1373,31 +1439,26 @@
       appScreen.classList.remove("hidden");
     }
 
-  const API_BASE =
-  location.hostname === "localhost"
-    ? "http://localhost:3000"
-    : "https://auth.lukintosh.com";
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
 
-async function api(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
+      const data = await response.json().catch(() => ({}));
 
-  const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.error || "Erro na API");
+        error.payload = data;
+        throw error;
+      }
 
-  if (!response.ok) {
-    const error = new Error(data.error || "Erro na API");
-    error.payload = data;
-    throw error;
-  }
-
-  return data;
-}
+      return data;
+    }
 
     function setMode(mode) {
       state.mode = mode;
@@ -1415,6 +1476,42 @@ async function api(path, options = {}) {
 
       authSubmit.textContent = isSignup ? "Criar conta" : "Entrar";
       passwordInput.autocomplete = isSignup ? "new-password" : "current-password";
+    }
+
+    function showEmailCodeStep(email, challengeId) {
+      state.pendingEmailForCode = email;
+      state.pendingEmailChallenge = challengeId;
+
+      authForm.classList.add("hidden");
+      document.querySelector(".oauth-divider")?.classList.add("hidden");
+      document.querySelector(".oauth-grid")?.classList.add("hidden");
+      loginTab.disabled = true;
+      signupTab.disabled = true;
+
+      emailCodeBox.classList.remove("hidden");
+
+      emailCodeText.textContent = `Enviamos um código de 6 dígitos para ${email}.`;
+      emailCodeInput.value = "";
+      emailCodeInput.focus();
+
+      authTitle.textContent = "Código de verificação";
+      authDescription.textContent = "Digite o código enviado para concluir o login.";
+    }
+
+    function hideEmailCodeStep() {
+      state.pendingEmailForCode = null;
+      state.pendingEmailChallenge = null;
+
+      emailCodeBox.classList.add("hidden");
+      authForm.classList.remove("hidden");
+      document.querySelector(".oauth-divider")?.classList.remove("hidden");
+      document.querySelector(".oauth-grid")?.classList.remove("hidden");
+      loginTab.disabled = false;
+      signupTab.disabled = false;
+
+      emailCodeInput.value = "";
+
+      setMode(state.mode);
     }
 
     function initialFromName(nameOrEmail) {
@@ -1575,8 +1672,6 @@ async function api(path, options = {}) {
       secretText.textContent = "";
       secretText.classList.add("hidden");
 
-      console.log("MFA ENROLL DATA:", data);
-
       if (data.qrImage && String(data.qrImage).startsWith("data:image")) {
         const img = document.createElement("img");
         img.alt = "QR Code do 2FA";
@@ -1588,17 +1683,8 @@ async function api(path, options = {}) {
         img.style.display = "block";
         img.style.objectFit = "contain";
 
-        img.onload = () => {
-          console.log("QR Code carregou com sucesso.");
-        };
-
         img.onerror = () => {
-          console.error("QR Image falhou:", String(data.qrImage).slice(0, 120));
-          qrBox.innerHTML = `
-            <p>
-              QR Code não carregou como imagem. Use o código manual abaixo.
-            </p>
-          `;
+          qrBox.innerHTML = `<p>QR Code não carregou como imagem. Use o código manual abaixo.</p>`;
         };
 
         qrBox.appendChild(img);
@@ -1614,11 +1700,7 @@ async function api(path, options = {}) {
           svg.style.display = "block";
         }
       } else {
-        qrBox.innerHTML = `
-          <p>
-            QR Code não foi gerado. Use o código manual abaixo.
-          </p>
-        `;
+        qrBox.innerHTML = `<p>QR Code não foi gerado. Use o código manual abaixo.</p>`;
       }
 
       if (data.secret) {
@@ -1694,22 +1776,76 @@ async function api(path, options = {}) {
           });
 
           showToast("Conta criada. Se confirmação por e-mail estiver ativa, verifique sua caixa de entrada.");
-        } else {
-          const data = await api("/api/login", {
-            method: "POST",
-            body: JSON.stringify({ email, password })
-          });
+          await loadAccount();
+          return;
+        }
 
-          if (data.mfaRequired) {
-            showToast("Login feito. Agora confirme o código 2FA.");
-          } else {
-            showToast("Login realizado.");
-          }
+        const data = await api("/api/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password })
+        });
+
+        if (data.emailCodeRequired) {
+          showEmailCodeStep(email, data.challengeId);
+          showToast("Código enviado para seu e-mail.");
+          return;
+        }
+
+        if (data.mfaRequired) {
+          showToast("Login feito. Agora confirme o código 2FA.");
+        } else {
+          showToast("Login realizado.");
         }
 
         await loadAccount();
       } catch (error) {
         showToast(error.message);
+      }
+    });
+
+    verifyEmailCodeButton.addEventListener("click", async () => {
+      try {
+        const code = emailCodeInput.value.trim();
+
+        if (!state.pendingEmailChallenge) {
+          return showToast("Nenhum desafio de verificação ativo.");
+        }
+
+        if (!code || code.length !== 6) {
+          return showToast("Digite o código de 6 dígitos.");
+        }
+
+        const data = await api("/api/login/verify-code", {
+          method: "POST",
+          body: JSON.stringify({
+            challengeId: state.pendingEmailChallenge,
+            code
+          })
+        });
+
+        hideEmailCodeStep();
+
+        if (data.mfaRequired) {
+          showToast("Código confirmado. Agora confirme o 2FA.");
+        } else {
+          showToast("Login confirmado.");
+        }
+
+        await loadAccount();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    backToLoginButton.addEventListener("click", () => {
+      hideEmailCodeStep();
+    });
+
+    emailCodeInput.addEventListener("input", () => {
+      emailCodeInput.value = emailCodeInput.value.replace(/\D/g, "").slice(0, 6);
+
+      if (emailCodeInput.value.length === 6) {
+        verifyEmailCodeButton.click();
       }
     });
 
@@ -1728,9 +1864,12 @@ async function api(path, options = {}) {
       state.mfa = null;
       state.currentMfaFactorId = null;
       state.currentVerifiedMfaFactorId = null;
+      state.pendingEmailChallenge = null;
+      state.pendingEmailForCode = null;
 
       emailInput.value = "";
       passwordInput.value = "";
+      hideEmailCodeStep();
 
       showToast("Você saiu da conta.");
       showAuth();
@@ -1806,8 +1945,6 @@ async function api(path, options = {}) {
           })
         });
 
-        console.log("MFA enroll response:", data);
-
         state.currentMfaFactorId = data.factorId;
 
         const setupBox = document.querySelector("#mfaSetupBox");
@@ -1820,7 +1957,6 @@ async function api(path, options = {}) {
 
         showToast("Escaneie o QR Code no Authenticator e digite o código.");
       } catch (error) {
-        console.error("Erro ao gerar QR Code MFA:", error);
         showToast(error.message);
       }
     });
