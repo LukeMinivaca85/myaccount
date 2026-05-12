@@ -2124,7 +2124,7 @@
     }
   });
 
-  document.querySelector("#verifyLoginMfaButton")?.addEventListener("click", async () => {
+   document.querySelector("#verifyLoginMfaButton")?.addEventListener("click", async () => {
     try {
       const code = document.querySelector("#mfaLoginCodeInput").value.trim();
 
@@ -2192,6 +2192,9 @@
       button.textContent = isPassword ? "Ocultar" : "Mostrar";
     });
   });
+
+  window.__LUK_ACCOUNTS_VERSION = "email-code-session-v4";
+  console.log("Lukintosh Accounts version:", window.__LUK_ACCOUNTS_VERSION);
 
   setMode("login");
   handleUrlError();
