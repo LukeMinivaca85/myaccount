@@ -1325,781 +1325,877 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const API_BASE = "https://auth.lukintosh.com";
+  const API_BASE = "https://auth.lukintosh.com";
 
-    if (window.location.hash.includes("access_token")) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      alert("O login voltou em modo token. Ajuste o backend para PKCE e tente novamente.");
+  if (window.location.hash.includes("access_token")) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    alert("O login voltou em modo token. Ajuste o backend para PKCE e tente novamente.");
+  }
+
+  const state = {
+    mode: "login",
+    user: null,
+    account: null,
+    sessions: [],
+    mfa: null,
+    currentMfaFactorId: null,
+    currentVerifiedMfaFactorId: null,
+    pendingEmailChallenge: null,
+    pendingEmailForCode: null
+  };
+
+  const loadingScreen = document.querySelector("#loadingScreen");
+  const authScreen = document.querySelector("#authScreen");
+  const appScreen = document.querySelector("#appScreen");
+  const toast = document.querySelector("#toast");
+
+  const loginTab = document.querySelector("#loginTab");
+  const signupTab = document.querySelector("#signupTab");
+  const authTitle = document.querySelector("#authTitle");
+  const authDescription = document.querySelector("#authDescription");
+  const authSubmit = document.querySelector("#authSubmit");
+  const authForm = document.querySelector("#authForm");
+  const displayNameLabel = document.querySelector("#displayNameLabel");
+  const displayNameInput = document.querySelector("#displayNameInput");
+  const emailInput = document.querySelector("#emailInput");
+  const passwordInput = document.querySelector("#passwordInput");
+
+  const emailCodeBox = document.querySelector("#emailCodeBox");
+  const emailCodeText = document.querySelector("#emailCodeText");
+  const emailCodeInput = document.querySelector("#emailCodeInput");
+  const verifyEmailCodeButton = document.querySelector("#verifyEmailCodeButton");
+  const backToLoginButton = document.querySelector("#backToLoginButton");
+
+  const logoutButton = document.querySelector("#logoutButton");
+  const refreshButton = document.querySelector("#refreshButton");
+  const copyUserIdButton = document.querySelector("#copyUserIdButton");
+  const profileForm = document.querySelector("#profileForm");
+  const passwordForm = document.querySelector("#passwordForm");
+
+  function getStoredAccessToken() {
+    return localStorage.getItem("lk_access_token") || "";
+  }
+
+  function storeSession(session) {
+    if (!session?.accessToken) return;
+
+    localStorage.setItem("lk_access_token", session.accessToken);
+
+    if (session.refreshToken) {
+      localStorage.setItem("lk_refresh_token", session.refreshToken);
     }
 
-    const state = {
-      mode: "login",
-      user: null,
-      account: null,
-      sessions: [],
-      mfa: null,
-      currentMfaFactorId: null,
-      currentVerifiedMfaFactorId: null,
-      pendingEmailChallenge: null,
-      pendingEmailForCode: null
+    if (session.expiresAt) {
+      localStorage.setItem("lk_expires_at", String(session.expiresAt));
+    }
+  }
+
+  function clearStoredSession() {
+    localStorage.removeItem("lk_access_token");
+    localStorage.removeItem("lk_refresh_token");
+    localStorage.removeItem("lk_expires_at");
+  }
+
+  function showToast(message) {
+    toast.textContent = humanizeError(message);
+    toast.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"), 5200);
+  }
+
+  function humanizeError(message) {
+    const text = String(message || "");
+
+    if (text.toLowerCase().includes("email not confirmed")) {
+      return "E-mail ainda não confirmado. Confirme pelo link enviado ou desligue a confirmação de e-mail no Supabase durante os testes.";
+    }
+
+    if (text.toLowerCase().includes("invalid login credentials")) {
+      return "E-mail ou senha incorretos.";
+    }
+
+    if (text.toLowerCase().includes("user already registered")) {
+      return "Essa conta já existe. Use Login em vez de Criar conta.";
+    }
+
+    if (text.toLowerCase().includes("oauth_failed")) {
+      return "Falha no login social. Verifique o provider no Supabase e a callback URL.";
+    }
+
+    if (text.toLowerCase().includes("mfa_required")) {
+      return "2FA obrigatório. Digite o código do Authenticator.";
+    }
+
+    if (text.toLowerCase().includes("invalid totp")) {
+      return "Código 2FA inválido. Aguarde mudar no app e tente novamente.";
+    }
+
+    if (text.toLowerCase().includes("invalid_code")) {
+      return "Código inválido ou expirado.";
+    }
+
+    if (text.toLowerCase().includes("email_code_required")) {
+      return "Digite o código enviado para seu e-mail.";
+    }
+
+    if (text.toLowerCase().includes("factor with the friendly name")) {
+      return "Já existe um fator 2FA com esse nome. O backend precisa usar nome único ou remover o fator antigo.";
+    }
+
+    if (text.toLowerCase().includes("not_authenticated")) {
+      return "Sessão não encontrada. Faça login novamente.";
+    }
+
+    return text;
+  }
+
+  function showLoading() {
+    loadingScreen.classList.remove("hidden");
+    authScreen.classList.add("hidden");
+    appScreen.classList.add("hidden");
+  }
+
+  function showAuth() {
+    loadingScreen.classList.add("hidden");
+    authScreen.classList.remove("hidden");
+    appScreen.classList.add("hidden");
+  }
+
+  function showApp() {
+    loadingScreen.classList.add("hidden");
+    authScreen.classList.add("hidden");
+    appScreen.classList.remove("hidden");
+  }
+
+  async function api(path, options = {}) {
+    const token = getStoredAccessToken();
+
+    const response = await fetch(`${API_BASE}${path}`, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {})
+      },
+      ...options
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const error = new Error(data.error || "Erro na API");
+      error.payload = data;
+      throw error;
+    }
+
+    return data;
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+
+    const isSignup = mode === "signup";
+
+    loginTab.classList.toggle("active", !isSignup);
+    signupTab.classList.toggle("active", isSignup);
+    displayNameLabel.classList.toggle("hidden", !isSignup);
+
+    authTitle.textContent = isSignup ? "Criar conta" : "Entrar";
+    authDescription.textContent = isSignup
+      ? "Crie uma conta Lukintosh para acessar o painel real."
+      : "Acesse sua conta Lukintosh para gerenciar segurança, sessões e configurações.";
+
+    authSubmit.textContent = isSignup ? "Criar conta" : "Entrar";
+    passwordInput.autocomplete = isSignup ? "new-password" : "current-password";
+  }
+
+  function showEmailCodeStep(email, challengeId) {
+    state.pendingEmailForCode = email;
+    state.pendingEmailChallenge = challengeId;
+
+    authForm.classList.add("hidden");
+    document.querySelector(".oauth-divider")?.classList.add("hidden");
+    document.querySelector(".oauth-grid")?.classList.add("hidden");
+    loginTab.disabled = true;
+    signupTab.disabled = true;
+
+    emailCodeBox.classList.remove("hidden");
+
+    emailCodeText.textContent = `Enviamos um código de 6 dígitos para ${email}.`;
+    emailCodeInput.value = "";
+    emailCodeInput.focus();
+
+    authTitle.textContent = "Código de verificação";
+    authDescription.textContent = "Digite o código enviado para concluir o login.";
+  }
+
+  function hideEmailCodeStep() {
+    state.pendingEmailForCode = null;
+    state.pendingEmailChallenge = null;
+
+    emailCodeBox.classList.add("hidden");
+    authForm.classList.remove("hidden");
+    document.querySelector(".oauth-divider")?.classList.remove("hidden");
+    document.querySelector(".oauth-grid")?.classList.remove("hidden");
+    loginTab.disabled = false;
+    signupTab.disabled = false;
+
+    emailCodeInput.value = "";
+
+    setMode(state.mode);
+  }
+
+  function initialFromName(nameOrEmail) {
+    return (nameOrEmail || "L").trim().charAt(0).toUpperCase();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderAvatar(elementId, user, fallbackInitial) {
+    const el = document.querySelector(elementId);
+    if (!el) return;
+
+    if (user?.avatarUrl) {
+      el.innerHTML = `<img src="${escapeHtml(user.avatarUrl)}" alt="">`;
+    } else {
+      el.textContent = fallbackInitial;
+    }
+  }
+
+  function buildAccountFromUser(user, mfa = null) {
+    return {
+      verified: Boolean(user?.emailConfirmedAt),
+      provider: user?.provider || "email",
+      providers: user?.providers || [],
+      mfa,
+      twoFactorEnabled: Boolean(mfa?.enabled),
+      activeSessions: 1,
+      devices: 1,
+      securityChecks: {
+        emailVerified: Boolean(user?.emailConfirmedAt),
+        mfaEnabled: Boolean(mfa?.enabled),
+        sessionActive: true,
+        hasDeviceRecord: true
+      },
+      securityScore: mfa?.enabled ? 100 : 75
     };
+  }
 
-    const loadingScreen = document.querySelector("#loadingScreen");
-    const authScreen = document.querySelector("#authScreen");
-    const appScreen = document.querySelector("#appScreen");
-    const toast = document.querySelector("#toast");
+  function openDashboardFromLoginData(data) {
+    if (!data?.user) return false;
 
-    const loginTab = document.querySelector("#loginTab");
-    const signupTab = document.querySelector("#signupTab");
-    const authTitle = document.querySelector("#authTitle");
-    const authDescription = document.querySelector("#authDescription");
-    const authSubmit = document.querySelector("#authSubmit");
-    const authForm = document.querySelector("#authForm");
-    const displayNameLabel = document.querySelector("#displayNameLabel");
-    const displayNameInput = document.querySelector("#displayNameInput");
-    const emailInput = document.querySelector("#emailInput");
-    const passwordInput = document.querySelector("#passwordInput");
+    state.user = data.user;
+    state.mfa = data.mfa || null;
+    state.account = buildAccountFromUser(data.user, data.mfa || null);
+    state.sessions = [];
 
-    const emailCodeBox = document.querySelector("#emailCodeBox");
-    const emailCodeText = document.querySelector("#emailCodeText");
-    const emailCodeInput = document.querySelector("#emailCodeInput");
-    const verifyEmailCodeButton = document.querySelector("#verifyEmailCodeButton");
-    const backToLoginButton = document.querySelector("#backToLoginButton");
+    renderAccount();
+    renderSessions();
+    renderMfa();
+    showApp();
 
-    const logoutButton = document.querySelector("#logoutButton");
-    const refreshButton = document.querySelector("#refreshButton");
-    const copyUserIdButton = document.querySelector("#copyUserIdButton");
-    const profileForm = document.querySelector("#profileForm");
-    const passwordForm = document.querySelector("#passwordForm");
+    return true;
+  }
 
-    function showToast(message) {
-      toast.textContent = humanizeError(message);
-      toast.classList.add("show");
-      clearTimeout(showToast.timer);
-      showToast.timer = setTimeout(() => toast.classList.remove("show"), 5200);
-    }
+  function renderAccount() {
+    const user = state.user;
+    const account = state.account;
 
-    function humanizeError(message) {
-      const text = String(message || "");
+    if (!user) return;
 
-      if (text.toLowerCase().includes("email not confirmed")) {
-        return "E-mail ainda não confirmado. Confirme pelo link enviado ou desligue a confirmação de e-mail no Supabase durante os testes.";
-      }
+    const displayName = user.displayName || "Lukintosh Account";
+    const email = user.email || "";
+    const initial = initialFromName(displayName || email);
 
-      if (text.toLowerCase().includes("invalid login credentials")) {
-        return "E-mail ou senha incorretos.";
-      }
+    const connectedProviders = user.providerNames?.length
+      ? user.providerNames.join(", ")
+      : user.providerName || "Email";
 
-      if (text.toLowerCase().includes("user already registered")) {
-        return "Essa conta já existe. Use Login em vez de Criar conta.";
-      }
+    const lastProvider = user.lastUsedProviderName || user.providerName || "Email";
 
-      if (text.toLowerCase().includes("oauth_failed")) {
-        return "Falha no login social. Verifique o provider no Supabase e a callback URL.";
-      }
+    document.querySelector("#sidebarName").textContent = displayName;
+    document.querySelector("#sidebarEmail").textContent = `${email} · ${connectedProviders}`;
 
-      if (text.toLowerCase().includes("mfa_required")) {
-        return "2FA obrigatório. Digite o código do Authenticator.";
-      }
+    document.querySelector("#accountName").textContent = displayName;
+    document.querySelector("#accountEmail").textContent = `${email} · Entrou com ${lastProvider}`;
 
-      if (text.toLowerCase().includes("invalid totp")) {
-        return "Código 2FA inválido. Aguarde mudar no app e tente novamente.";
-      }
+    renderAvatar("#sidebarInitial", user, initial);
+    renderAvatar("#mainInitial", user, initial);
 
-      if (text.toLowerCase().includes("invalid_code")) {
-        return "Código inválido ou expirado.";
-      }
+    document.querySelector("#profileDisplayName").value = displayName;
+    document.querySelector("#profileEmail").value = email;
 
-      if (text.toLowerCase().includes("email_code_required")) {
-        return "Digite o código enviado para seu e-mail.";
-      }
+    document.querySelector("#securityScore").textContent =
+      Number.isFinite(account?.securityScore) ? `${account.securityScore}%` : "--";
 
-      if (text.toLowerCase().includes("factor with the friendly name")) {
-        return "Já existe um fator 2FA com esse nome. O backend precisa usar nome único ou remover o fator antigo.";
-      }
+    document.querySelector("#activeSessions").textContent = account?.activeSessions ?? "--";
+    document.querySelector("#deviceCount").textContent = account?.devices ?? "--";
 
-      return text;
-    }
+    const verifiedBadge = document.querySelector("#verifiedBadge");
 
-    function showLoading() {
-      loadingScreen.classList.remove("hidden");
-      authScreen.classList.add("hidden");
-      appScreen.classList.add("hidden");
-    }
+    verifiedBadge.textContent = account?.verified
+      ? `● ${lastProvider}`
+      : "● Email pending";
 
-    function showAuth() {
-      loadingScreen.classList.add("hidden");
-      authScreen.classList.remove("hidden");
-      appScreen.classList.add("hidden");
-    }
+    verifiedBadge.classList.toggle("yellow", !account?.verified);
+  }
 
-    function showApp() {
-      loadingScreen.classList.add("hidden");
-      authScreen.classList.add("hidden");
-      appScreen.classList.remove("hidden");
-    }
+  function renderSessions() {
+    const list = document.querySelector("#sessionsList");
+    const sessions = state.sessions || [];
 
-    async function api(path, options = {}) {
-      const response = await fetch(`${API_BASE}${path}`, {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.headers || {})
-        },
-        ...options
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        const error = new Error(data.error || "Erro na API");
-        error.payload = data;
-        throw error;
-      }
-
-      return data;
-    }
-
-    function setMode(mode) {
-      state.mode = mode;
-
-      const isSignup = mode === "signup";
-
-      loginTab.classList.toggle("active", !isSignup);
-      signupTab.classList.toggle("active", isSignup);
-      displayNameLabel.classList.toggle("hidden", !isSignup);
-
-      authTitle.textContent = isSignup ? "Criar conta" : "Entrar";
-      authDescription.textContent = isSignup
-        ? "Crie uma conta Lukintosh para acessar o painel real."
-        : "Acesse sua conta Lukintosh para gerenciar segurança, sessões e configurações.";
-
-      authSubmit.textContent = isSignup ? "Criar conta" : "Entrar";
-      passwordInput.autocomplete = isSignup ? "new-password" : "current-password";
-    }
-
-    function showEmailCodeStep(email, challengeId) {
-      state.pendingEmailForCode = email;
-      state.pendingEmailChallenge = challengeId;
-
-      authForm.classList.add("hidden");
-      document.querySelector(".oauth-divider")?.classList.add("hidden");
-      document.querySelector(".oauth-grid")?.classList.add("hidden");
-      loginTab.disabled = true;
-      signupTab.disabled = true;
-
-      emailCodeBox.classList.remove("hidden");
-
-      emailCodeText.textContent = `Enviamos um código de 6 dígitos para ${email}.`;
-      emailCodeInput.value = "";
-      emailCodeInput.focus();
-
-      authTitle.textContent = "Código de verificação";
-      authDescription.textContent = "Digite o código enviado para concluir o login.";
-    }
-
-    function hideEmailCodeStep() {
-      state.pendingEmailForCode = null;
-      state.pendingEmailChallenge = null;
-
-      emailCodeBox.classList.add("hidden");
-      authForm.classList.remove("hidden");
-      document.querySelector(".oauth-divider")?.classList.remove("hidden");
-      document.querySelector(".oauth-grid")?.classList.remove("hidden");
-      loginTab.disabled = false;
-      signupTab.disabled = false;
-
-      emailCodeInput.value = "";
-
-      setMode(state.mode);
-    }
-
-    function initialFromName(nameOrEmail) {
-      return (nameOrEmail || "L").trim().charAt(0).toUpperCase();
-    }
-
-    function renderAvatar(elementId, user, fallbackInitial) {
-      const el = document.querySelector(elementId);
-      if (!el) return;
-
-      if (user?.avatarUrl) {
-        el.innerHTML = `<img src="${escapeHtml(user.avatarUrl)}" alt="">`;
-      } else {
-        el.textContent = fallbackInitial;
-      }
-    }
-
-    function renderAccount() {
-      const user = state.user;
-      const account = state.account;
-
-      if (!user) return;
-
-      const displayName = user.displayName || "Lukintosh Account";
-      const email = user.email || "";
-      const initial = initialFromName(displayName || email);
-
-      const connectedProviders = user.providerNames?.length
-        ? user.providerNames.join(", ")
-        : user.providerName || "Email";
-
-      const lastProvider = user.lastUsedProviderName || user.providerName || "Email";
-
-      document.querySelector("#sidebarName").textContent = displayName;
-      document.querySelector("#sidebarEmail").textContent = `${email} · ${connectedProviders}`;
-
-      document.querySelector("#accountName").textContent = displayName;
-      document.querySelector("#accountEmail").textContent = `${email} · Entrou com ${lastProvider}`;
-
-      renderAvatar("#sidebarInitial", user, initial);
-      renderAvatar("#mainInitial", user, initial);
-
-      document.querySelector("#profileDisplayName").value = displayName;
-      document.querySelector("#profileEmail").value = email;
-
-      document.querySelector("#securityScore").textContent =
-        Number.isFinite(account?.securityScore) ? `${account.securityScore}%` : "--";
-
-      document.querySelector("#activeSessions").textContent = account?.activeSessions ?? "--";
-      document.querySelector("#deviceCount").textContent = account?.devices ?? "--";
-
-      const verifiedBadge = document.querySelector("#verifiedBadge");
-
-      verifiedBadge.textContent = account?.verified
-        ? `● ${lastProvider}`
-        : "● Email pending";
-
-      verifiedBadge.classList.toggle("yellow", !account?.verified);
-    }
-
-    function renderSessions() {
-      const list = document.querySelector("#sessionsList");
-      const sessions = state.sessions || [];
-
-      if (!sessions.length) {
-        list.innerHTML = `
-          <div class="setting-row">
-            <div>
-              <h3>Nenhuma sessão encontrada</h3>
-              <p>A API não retornou sessões.</p>
-            </div>
-            <span class="tag red">Empty</span>
-          </div>
-        `;
-        return;
-      }
-
-      list.innerHTML = sessions.map(session => `
+    if (!sessions.length) {
+      list.innerHTML = `
         <div class="setting-row">
           <div>
-            <h3>${escapeHtml(session.os || "Unknown device")}</h3>
-            <p>
-              ${escapeHtml(session.browser || "Web")}
-              · ${escapeHtml(session.location_label || "Location hidden")}
-              · ${new Date(session.last_seen_at || Date.now()).toLocaleString("pt-BR")}
-            </p>
+            <h3>Sessão atual</h3>
+            <p>Login ativo neste navegador.</p>
           </div>
-          <span class="tag">${session.current ? "Atual" : session.revoked ? "Revogada" : "Ativa"}</span>
+          <span class="tag">Atual</span>
         </div>
-      `).join("");
+      `;
+      return;
     }
 
-    function renderMfa() {
-      const mfa = state.mfa;
-      const enabled = Boolean(mfa?.enabled);
-      const needsChallenge = Boolean(mfa?.needsChallenge);
-
-      const statusText = document.querySelector("#mfaStatusText");
-      const enableButton = document.querySelector("#enableMfaButton");
-      const disableButton = document.querySelector("#disableMfaButton");
-      const badge = document.querySelector("#twoFactorBadge");
-      const mfaGate = document.querySelector("#mfaGate");
-      const systemDot = document.querySelector("#systemDot");
-      const systemStatusText = document.querySelector("#systemStatusText");
-
-      const factors = mfa?.factors || [];
-      state.currentVerifiedMfaFactorId = factors[0]?.id || null;
-
-      if (statusText) {
-        statusText.textContent = enabled
-          ? `2FA ativo. Nível atual: ${mfa.currentLevel || "aal1"}.`
-          : "2FA desativado. Ative para proteger melhor sua conta.";
-      }
-
-      if (enableButton) enableButton.classList.toggle("hidden", enabled);
-      if (disableButton) disableButton.classList.toggle("hidden", !enabled);
-
-      if (badge) {
-        badge.textContent = enabled ? "2FA: On" : "2FA: Off";
-        badge.classList.toggle("yellow", !enabled);
-      }
-
-      if (mfaGate) {
-        mfaGate.classList.toggle("hidden", !needsChallenge);
-      }
-
-      document.querySelectorAll(".protected-action").forEach((button) => {
-        button.disabled = needsChallenge;
-      });
-
-      if (systemDot) {
-        systemDot.classList.toggle("yellow", needsChallenge);
-      }
-
-      if (systemStatusText) {
-        systemStatusText.textContent = needsChallenge
-          ? "2FA verification required"
-          : "Account systems operational";
-      }
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    async function renderMfaQrCode(data) {
-      const qrBox = document.querySelector("#mfaQrBox");
-      const secretText = document.querySelector("#mfaSecretText");
-
-      if (!qrBox || !secretText) return;
-
-      qrBox.innerHTML = "";
-      secretText.textContent = "";
-      secretText.classList.add("hidden");
-
-      if (data.qrImage && String(data.qrImage).startsWith("data:image")) {
-        const img = document.createElement("img");
-        img.alt = "QR Code do 2FA";
-        img.src = data.qrImage;
-        img.width = 200;
-        img.height = 200;
-        img.style.width = "200px";
-        img.style.height = "200px";
-        img.style.display = "block";
-        img.style.objectFit = "contain";
-
-        img.onerror = () => {
-          qrBox.innerHTML = `<p>QR Code não carregou como imagem. Use o código manual abaixo.</p>`;
-        };
-
-        qrBox.appendChild(img);
-      } else if (data.qrCode && String(data.qrCode).trim().startsWith("<svg")) {
-        qrBox.innerHTML = data.qrCode;
-
-        const svg = qrBox.querySelector("svg");
-        if (svg) {
-          svg.setAttribute("width", "200");
-          svg.setAttribute("height", "200");
-          svg.style.width = "200px";
-          svg.style.height = "200px";
-          svg.style.display = "block";
-        }
-      } else {
-        qrBox.innerHTML = `<p>QR Code não foi gerado. Use o código manual abaixo.</p>`;
-      }
-
-      if (data.secret) {
-        secretText.textContent = `Código manual: ${data.secret}`;
-        secretText.classList.remove("hidden");
-      } else if (data.uri) {
-        secretText.textContent = `URI manual: ${data.uri}`;
-        secretText.classList.remove("hidden");
-      }
-    }
-
-    async function loadMfaStatus() {
-      try {
-        const data = await api("/api/mfa/status");
-        state.mfa = data.mfa;
-        renderMfa();
-      } catch (error) {
-        console.warn("MFA status failed:", error.message);
-      }
-    }
-
-    async function loadAccount() {
-      showLoading();
-
-      try {
-        const me = await api("/api/me");
-        const status = await api("/api/account-status");
-        const sessions = await api("/api/sessions");
-
-        state.user = me.user;
-        state.mfa = me.mfa || status.account?.mfa || null;
-        state.account = status.account;
-        state.sessions = sessions.sessions;
-
-        renderAccount();
-        renderSessions();
-        renderMfa();
-        showApp();
-      } catch (error) {
-        state.user = null;
-        state.account = null;
-        state.sessions = [];
-        state.mfa = null;
-        showAuth();
-      }
-    }
-
-    function handleUrlError() {
-      const params = new URLSearchParams(window.location.search);
-      const error = params.get("error");
-
-      if (error) {
-        showToast(error);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-
-    loginTab.addEventListener("click", () => setMode("login"));
-    signupTab.addEventListener("click", () => setMode("signup"));
-
-  async function handleEmailAuth(event) {
-  if (event) event.preventDefault();
-
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
-  const displayName = displayNameInput.value.trim();
-
-  if (!email || !password) {
-    showToast("Digite e-mail e senha.");
-    return;
+    list.innerHTML = sessions.map(session => `
+      <div class="setting-row">
+        <div>
+          <h3>${escapeHtml(session.os || "Unknown device")}</h3>
+          <p>
+            ${escapeHtml(session.browser || "Web")}
+            · ${escapeHtml(session.location_label || "Location hidden")}
+            · ${new Date(session.last_seen_at || Date.now()).toLocaleString("pt-BR")}
+          </p>
+        </div>
+        <span class="tag">${session.current ? "Atual" : session.revoked ? "Revogada" : "Ativa"}</span>
+      </div>
+    `).join("");
   }
 
-  try {
-    authSubmit.disabled = true;
-    authSubmit.textContent = state.mode === "signup" ? "Criando..." : "Entrando...";
+  function renderMfa() {
+    const mfa = state.mfa;
+    const enabled = Boolean(mfa?.enabled);
+    const needsChallenge = Boolean(mfa?.needsChallenge);
 
-    if (state.mode === "signup") {
-      await api("/api/signup", {
-        method: "POST",
-        body: JSON.stringify({ email, password, displayName })
-      });
+    const statusText = document.querySelector("#mfaStatusText");
+    const enableButton = document.querySelector("#enableMfaButton");
+    const disableButton = document.querySelector("#disableMfaButton");
+    const badge = document.querySelector("#twoFactorBadge");
+    const mfaGate = document.querySelector("#mfaGate");
+    const systemDot = document.querySelector("#systemDot");
+    const systemStatusText = document.querySelector("#systemStatusText");
 
-      showToast("Conta criada. Se confirmação por e-mail estiver ativa, verifique sua caixa de entrada.");
-      await loadAccount();
-      return;
+    const factors = mfa?.factors || [];
+    state.currentVerifiedMfaFactorId = factors[0]?.id || null;
+
+    if (statusText) {
+      statusText.textContent = enabled
+        ? `2FA ativo. Nível atual: ${mfa.currentLevel || "aal1"}.`
+        : "2FA desativado. Ative para proteger melhor sua conta.";
     }
 
-    const data = await api("/api/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
+    if (enableButton) enableButton.classList.toggle("hidden", enabled);
+    if (disableButton) disableButton.classList.toggle("hidden", !enabled);
+
+    if (badge) {
+      badge.textContent = enabled ? "2FA: On" : "2FA: Off";
+      badge.classList.toggle("yellow", !enabled);
+    }
+
+    if (mfaGate) {
+      mfaGate.classList.toggle("hidden", !needsChallenge);
+    }
+
+    document.querySelectorAll(".protected-action").forEach((button) => {
+      button.disabled = needsChallenge;
     });
 
-    if (data.emailCodeRequired) {
-      showEmailCodeStep(email, data.challengeId);
-      showToast("Código enviado para seu e-mail.");
-      return;
+    if (systemDot) {
+      systemDot.classList.toggle("yellow", needsChallenge);
     }
 
-    if (data.mfaRequired) {
-      showToast("Login feito. Agora confirme o código 2FA.");
+    if (systemStatusText) {
+      systemStatusText.textContent = needsChallenge
+        ? "2FA verification required"
+        : "Account systems operational";
+    }
+  }
+
+  async function renderMfaQrCode(data) {
+    const qrBox = document.querySelector("#mfaQrBox");
+    const secretText = document.querySelector("#mfaSecretText");
+
+    if (!qrBox || !secretText) return;
+
+    qrBox.innerHTML = "";
+    secretText.textContent = "";
+    secretText.classList.add("hidden");
+
+    if (data.qrImage && String(data.qrImage).startsWith("data:image")) {
+      const img = document.createElement("img");
+      img.alt = "QR Code do 2FA";
+      img.src = data.qrImage;
+      img.width = 200;
+      img.height = 200;
+      img.style.width = "200px";
+      img.style.height = "200px";
+      img.style.display = "block";
+      img.style.objectFit = "contain";
+
+      img.onerror = () => {
+        qrBox.innerHTML = `<p>QR Code não carregou como imagem. Use o código manual abaixo.</p>`;
+      };
+
+      qrBox.appendChild(img);
+    } else if (data.qrCode && String(data.qrCode).trim().startsWith("<svg")) {
+      qrBox.innerHTML = data.qrCode;
+
+      const svg = qrBox.querySelector("svg");
+      if (svg) {
+        svg.setAttribute("width", "200");
+        svg.setAttribute("height", "200");
+        svg.style.width = "200px";
+        svg.style.height = "200px";
+        svg.style.display = "block";
+      }
     } else {
-      showToast("Login realizado.");
+      qrBox.innerHTML = `<p>QR Code não foi gerado. Use o código manual abaixo.</p>`;
     }
 
-    await loadAccount();
-  } catch (error) {
-    showToast(error.message);
-  } finally {
-    authSubmit.disabled = false;
-    authSubmit.textContent = state.mode === "signup" ? "Criar conta" : "Entrar";
+    if (data.secret) {
+      secretText.textContent = `Código manual: ${data.secret}`;
+      secretText.classList.remove("hidden");
+    } else if (data.uri) {
+      secretText.textContent = `URI manual: ${data.uri}`;
+      secretText.classList.remove("hidden");
+    }
   }
-}
 
-authForm.addEventListener("submit", handleEmailAuth);
+  async function loadMfaStatus() {
+    try {
+      const data = await api("/api/mfa/status");
+      state.mfa = data.mfa;
+      renderMfa();
+    } catch (error) {
+      console.warn("MFA status failed:", error.message);
+    }
+  }
 
-authSubmit.addEventListener("click", (event) => {
-  event.preventDefault();
-  handleEmailAuth(event);
-});
-    verifyEmailCodeButton.addEventListener("click", async () => {
-      try {
-        const code = emailCodeInput.value.trim();
+  async function loadAccount() {
+    showLoading();
 
-        if (!state.pendingEmailChallenge) {
-          return showToast("Nenhum desafio de verificação ativo.");
-        }
+    try {
+      const me = await api("/api/me");
+      const status = await api("/api/account-status");
+      const sessions = await api("/api/sessions");
 
-        if (!code || code.length !== 6) {
-          return showToast("Digite o código de 6 dígitos.");
-        }
+      state.user = me.user;
+      state.mfa = me.mfa || status.account?.mfa || null;
+      state.account = status.account || buildAccountFromUser(me.user, state.mfa);
+      state.sessions = sessions.sessions || [];
 
-        const data = await api("/api/login/verify-code", {
-          method: "POST",
-          body: JSON.stringify({
-            challengeId: state.pendingEmailChallenge,
-            code
-          })
-        });
-
-        hideEmailCodeStep();
-
-        if (data.mfaRequired) {
-          showToast("Código confirmado. Agora confirme o 2FA.");
-        } else {
-          showToast("Login confirmado.");
-        }
-
-        await loadAccount();
-      } catch (error) {
-        showToast(error.message);
-      }
-    });
-
-    backToLoginButton.addEventListener("click", () => {
-      hideEmailCodeStep();
-    });
-
-    emailCodeInput.addEventListener("input", () => {
-      emailCodeInput.value = emailCodeInput.value.replace(/\D/g, "").slice(0, 6);
-
-      if (emailCodeInput.value.length === 6) {
-        verifyEmailCodeButton.click();
-      }
-    });
-
-    logoutButton.addEventListener("click", async () => {
-      try {
-        await api("/api/logout", {
-          method: "POST"
-        });
-      } catch (error) {
-        console.warn("Logout API failed:", error.message);
-      }
-
+      renderAccount();
+      renderSessions();
+      renderMfa();
+      showApp();
+    } catch (error) {
       state.user = null;
       state.account = null;
       state.sessions = [];
       state.mfa = null;
-      state.currentMfaFactorId = null;
-      state.currentVerifiedMfaFactorId = null;
-      state.pendingEmailChallenge = null;
-      state.pendingEmailForCode = null;
+      showAuth();
+    }
+  }
 
-      emailInput.value = "";
-      passwordInput.value = "";
+  function handleUrlError() {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+
+    if (error) {
+      showToast(error);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+
+  async function handleEmailAuth(event) {
+    if (event) event.preventDefault();
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const displayName = displayNameInput.value.trim();
+
+    if (!email || !password) {
+      showToast("Digite e-mail e senha.");
+      return;
+    }
+
+    try {
+      authSubmit.disabled = true;
+      authSubmit.textContent = state.mode === "signup" ? "Criando..." : "Entrando...";
+
+      if (state.mode === "signup") {
+        const data = await api("/api/signup", {
+          method: "POST",
+          body: JSON.stringify({ email, password, displayName })
+        });
+
+        if (data.session) {
+          storeSession(data.session);
+        }
+
+        showToast("Conta criada. Se confirmação por e-mail estiver ativa, verifique sua caixa de entrada.");
+
+        if (data.user && openDashboardFromLoginData(data)) {
+          return;
+        }
+
+        await loadAccount();
+        return;
+      }
+
+      const data = await api("/api/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      });
+
+      if (data.emailCodeRequired) {
+        showEmailCodeStep(email, data.challengeId);
+        showToast("Código enviado para seu e-mail.");
+        return;
+      }
+
+      storeSession(data.session);
+
+      if (data.mfaRequired) {
+        showToast("Login feito. Agora confirme o código 2FA.");
+      } else {
+        showToast("Login realizado.");
+      }
+
+      if (openDashboardFromLoginData(data)) {
+        return;
+      }
+
+      await loadAccount();
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      authSubmit.disabled = false;
+      authSubmit.textContent = state.mode === "signup" ? "Criar conta" : "Entrar";
+    }
+  }
+
+  loginTab.addEventListener("click", () => setMode("login"));
+  signupTab.addEventListener("click", () => setMode("signup"));
+
+  authForm.addEventListener("submit", handleEmailAuth);
+
+  authSubmit.addEventListener("click", (event) => {
+    event.preventDefault();
+    handleEmailAuth(event);
+  });
+
+  verifyEmailCodeButton.addEventListener("click", async () => {
+    try {
+      const code = emailCodeInput.value.trim();
+
+      if (!state.pendingEmailChallenge) {
+        return showToast("Nenhum desafio de verificação ativo.");
+      }
+
+      if (!code || code.length !== 6) {
+        return showToast("Digite o código de 6 dígitos.");
+      }
+
+      verifyEmailCodeButton.disabled = true;
+      verifyEmailCodeButton.textContent = "Verificando...";
+
+      const data = await api("/api/login/verify-code", {
+        method: "POST",
+        body: JSON.stringify({
+          challengeId: state.pendingEmailChallenge,
+          code
+        })
+      });
+
+      storeSession(data.session);
+
       hideEmailCodeStep();
 
-      showToast("Você saiu da conta.");
-      showAuth();
+      if (data.mfaRequired) {
+        showToast("Código confirmado. Agora confirme o 2FA.");
+      } else {
+        showToast("Login confirmado.");
+      }
 
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 250);
-    });
+      if (openDashboardFromLoginData(data)) {
+        return;
+      }
 
-    refreshButton.addEventListener("click", async () => {
       await loadAccount();
-      showToast("Conta atualizada.");
-    });
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      verifyEmailCodeButton.disabled = false;
+      verifyEmailCodeButton.textContent = "Verificar código";
+    }
+  });
 
-    copyUserIdButton.addEventListener("click", async () => {
-      if (!state.user?.id) return showToast("User ID indisponível.");
+  backToLoginButton.addEventListener("click", () => {
+    hideEmailCodeStep();
+  });
 
-      await navigator.clipboard.writeText(state.user.id);
-      showToast("User ID copiado.");
-    });
+  emailCodeInput.addEventListener("input", () => {
+    emailCodeInput.value = emailCodeInput.value.replace(/\D/g, "").slice(0, 6);
 
-    profileForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    if (emailCodeInput.value.length === 6) {
+      verifyEmailCodeButton.click();
+    }
+  });
 
-      const displayName = document.querySelector("#profileDisplayName").value.trim();
+  logoutButton.addEventListener("click", async () => {
+    clearStoredSession();
 
-      try {
-        const data = await api("/api/me", {
-          method: "PATCH",
-          body: JSON.stringify({ displayName })
-        });
-
-        state.user = data.user;
-
-        renderAccount();
-        showToast("Perfil atualizado.");
-      } catch (error) {
-        showToast(error.message);
-        if (error.message === "mfa_required") await loadMfaStatus();
-      }
-    });
-
-    passwordForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const newPassword = document.querySelector("#newPasswordInput").value;
-
-      try {
-        await api("/api/password", {
-          method: "PATCH",
-          body: JSON.stringify({ newPassword })
-        });
-
-        document.querySelector("#newPasswordInput").value = "";
-        showToast("Senha alterada com sucesso.");
-      } catch (error) {
-        showToast(error.message);
-        if (error.message === "mfa_required") await loadMfaStatus();
-      }
-    });
-
-    document.querySelector("#enableMfaButton")?.addEventListener("click", async () => {
-      try {
-        const qrBox = document.querySelector("#mfaQrBox");
-        if (qrBox) {
-          qrBox.innerHTML = "<p>Gerando QR Code...</p>";
-        }
-
-        const data = await api("/api/mfa/enroll", {
-          method: "POST",
-          body: JSON.stringify({
-            friendlyName: "Lukintosh Accounts"
-          })
-        });
-
-        state.currentMfaFactorId = data.factorId;
-
-        const setupBox = document.querySelector("#mfaSetupBox");
-        const codeInput = document.querySelector("#mfaCodeInput");
-
-        if (setupBox) setupBox.classList.remove("hidden");
-        if (codeInput) codeInput.value = "";
-
-        await renderMfaQrCode(data);
-
-        showToast("Escaneie o QR Code no Authenticator e digite o código.");
-      } catch (error) {
-        showToast(error.message);
-      }
-    });
-
-    document.querySelector("#verifyMfaButton")?.addEventListener("click", async () => {
-      try {
-        const code = document.querySelector("#mfaCodeInput").value.trim();
-
-        if (!state.currentMfaFactorId) {
-          return showToast("Clique em Ativar 2FA primeiro.");
-        }
-
-        if (!code || code.length !== 6) {
-          return showToast("Digite o código de 6 dígitos.");
-        }
-
-        await api("/api/mfa/verify", {
-          method: "POST",
-          body: JSON.stringify({
-            factorId: state.currentMfaFactorId,
-            code
-          })
-        });
-
-        document.querySelector("#mfaSetupBox").classList.add("hidden");
-        document.querySelector("#mfaCodeInput").value = "";
-
-        showToast("2FA ativado com sucesso.");
-        await loadAccount();
-      } catch (error) {
-        showToast(error.message);
-      }
-    });
-
-    document.querySelector("#disableMfaButton")?.addEventListener("click", async () => {
-      try {
-        if (!state.currentVerifiedMfaFactorId) {
-          return showToast("Nenhum fator 2FA encontrado.");
-        }
-
-        const ok = confirm("Tem certeza que deseja desativar o 2FA?");
-        if (!ok) return;
-
-        await api(`/api/mfa/factors/${state.currentVerifiedMfaFactorId}`, {
-          method: "DELETE"
-        });
-
-        showToast("2FA desativado.");
-        await loadAccount();
-      } catch (error) {
-        showToast(error.message);
-      }
-    });
-
-    document.querySelector("#verifyLoginMfaButton")?.addEventListener("click", async () => {
-      try {
-        const code = document.querySelector("#mfaLoginCodeInput").value.trim();
-
-        if (!code || code.length !== 6) {
-          return showToast("Digite o código de 6 dígitos.");
-        }
-
-        const factorId = state.currentVerifiedMfaFactorId || state.mfa?.factors?.[0]?.id;
-
-        if (!factorId) {
-          return showToast("Nenhum fator 2FA encontrado.");
-        }
-
-        const challenge = await api("/api/mfa/challenge", {
-          method: "POST",
-          body: JSON.stringify({ factorId })
-        });
-
-        await api("/api/mfa/challenge-verify", {
-          method: "POST",
-          body: JSON.stringify({
-            factorId,
-            challengeId: challenge.challengeId,
-            code
-          })
-        });
-
-        document.querySelector("#mfaLoginCodeInput").value = "";
-
-        showToast("2FA verificado.");
-        await loadAccount();
-      } catch (error) {
-        showToast(error.message);
-      }
-    });
-
-    document.querySelector("#revokeOtherSessionsButton")?.addEventListener("click", async () => {
-      try {
-        const ok = confirm("Revogar todas as outras sessões?");
-        if (!ok) return;
-
-        await api("/api/sessions/revoke-all-others", {
-          method: "POST"
-        });
-
-        showToast("Outras sessões revogadas.");
-        await loadAccount();
-      } catch (error) {
-        showToast(error.message);
-        if (error.message === "mfa_required") await loadMfaStatus();
-      }
-    });
-
-    document.querySelectorAll("[data-toast]").forEach(button => {
-      button.addEventListener("click", () => showToast(button.dataset.toast));
-    });
-
-    document.querySelectorAll("[data-toggle-password]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const input = document.getElementById(button.dataset.togglePassword);
-        if (!input) return;
-
-        const isPassword = input.type === "password";
-        input.type = isPassword ? "text" : "password";
-        button.textContent = isPassword ? "Ocultar" : "Mostrar";
+    try {
+      await api("/api/logout", {
+        method: "POST"
       });
-    });
+    } catch (error) {
+      console.warn("Logout API failed:", error.message);
+    }
 
-    setMode("login");
-    handleUrlError();
-    loadAccount();
-  </script>
+    state.user = null;
+    state.account = null;
+    state.sessions = [];
+    state.mfa = null;
+    state.currentMfaFactorId = null;
+    state.currentVerifiedMfaFactorId = null;
+    state.pendingEmailChallenge = null;
+    state.pendingEmailForCode = null;
+
+    emailInput.value = "";
+    passwordInput.value = "";
+    hideEmailCodeStep();
+
+    showToast("Você saiu da conta.");
+    showAuth();
+
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 250);
+  });
+
+  refreshButton.addEventListener("click", async () => {
+    await loadAccount();
+    showToast("Conta atualizada.");
+  });
+
+  copyUserIdButton.addEventListener("click", async () => {
+    if (!state.user?.id) return showToast("User ID indisponível.");
+
+    await navigator.clipboard.writeText(state.user.id);
+    showToast("User ID copiado.");
+  });
+
+  profileForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const displayName = document.querySelector("#profileDisplayName").value.trim();
+
+    try {
+      const data = await api("/api/me", {
+        method: "PATCH",
+        body: JSON.stringify({ displayName })
+      });
+
+      state.user = data.user;
+
+      renderAccount();
+      showToast("Perfil atualizado.");
+    } catch (error) {
+      showToast(error.message);
+      if (error.message === "mfa_required") await loadMfaStatus();
+    }
+  });
+
+  passwordForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const newPassword = document.querySelector("#newPasswordInput").value;
+
+    try {
+      await api("/api/password", {
+        method: "PATCH",
+        body: JSON.stringify({ newPassword })
+      });
+
+      document.querySelector("#newPasswordInput").value = "";
+      showToast("Senha alterada com sucesso.");
+    } catch (error) {
+      showToast(error.message);
+      if (error.message === "mfa_required") await loadMfaStatus();
+    }
+  });
+
+  document.querySelector("#enableMfaButton")?.addEventListener("click", async () => {
+    try {
+      const qrBox = document.querySelector("#mfaQrBox");
+      if (qrBox) {
+        qrBox.innerHTML = "<p>Gerando QR Code...</p>";
+      }
+
+      const data = await api("/api/mfa/enroll", {
+        method: "POST",
+        body: JSON.stringify({
+          friendlyName: "Lukintosh Accounts"
+        })
+      });
+
+      state.currentMfaFactorId = data.factorId;
+
+      const setupBox = document.querySelector("#mfaSetupBox");
+      const codeInput = document.querySelector("#mfaCodeInput");
+
+      if (setupBox) setupBox.classList.remove("hidden");
+      if (codeInput) codeInput.value = "";
+
+      await renderMfaQrCode(data);
+
+      showToast("Escaneie o QR Code no Authenticator e digite o código.");
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.querySelector("#verifyMfaButton")?.addEventListener("click", async () => {
+    try {
+      const code = document.querySelector("#mfaCodeInput").value.trim();
+
+      if (!state.currentMfaFactorId) {
+        return showToast("Clique em Ativar 2FA primeiro.");
+      }
+
+      if (!code || code.length !== 6) {
+        return showToast("Digite o código de 6 dígitos.");
+      }
+
+      await api("/api/mfa/verify", {
+        method: "POST",
+        body: JSON.stringify({
+          factorId: state.currentMfaFactorId,
+          code
+        })
+      });
+
+      document.querySelector("#mfaSetupBox").classList.add("hidden");
+      document.querySelector("#mfaCodeInput").value = "";
+
+      showToast("2FA ativado com sucesso.");
+      await loadAccount();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.querySelector("#disableMfaButton")?.addEventListener("click", async () => {
+    try {
+      if (!state.currentVerifiedMfaFactorId) {
+        return showToast("Nenhum fator 2FA encontrado.");
+      }
+
+      const ok = confirm("Tem certeza que deseja desativar o 2FA?");
+      if (!ok) return;
+
+      await api(`/api/mfa/factors/${state.currentVerifiedMfaFactorId}`, {
+        method: "DELETE"
+      });
+
+      showToast("2FA desativado.");
+      await loadAccount();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.querySelector("#verifyLoginMfaButton")?.addEventListener("click", async () => {
+    try {
+      const code = document.querySelector("#mfaLoginCodeInput").value.trim();
+
+      if (!code || code.length !== 6) {
+        return showToast("Digite o código de 6 dígitos.");
+      }
+
+      const factorId = state.currentVerifiedMfaFactorId || state.mfa?.factors?.[0]?.id;
+
+      if (!factorId) {
+        return showToast("Nenhum fator 2FA encontrado.");
+      }
+
+      const challenge = await api("/api/mfa/challenge", {
+        method: "POST",
+        body: JSON.stringify({ factorId })
+      });
+
+      await api("/api/mfa/challenge-verify", {
+        method: "POST",
+        body: JSON.stringify({
+          factorId,
+          challengeId: challenge.challengeId,
+          code
+        })
+      });
+
+      document.querySelector("#mfaLoginCodeInput").value = "";
+
+      showToast("2FA verificado.");
+      await loadAccount();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.querySelector("#revokeOtherSessionsButton")?.addEventListener("click", async () => {
+    try {
+      const ok = confirm("Revogar todas as outras sessões?");
+      if (!ok) return;
+
+      await api("/api/sessions/revoke-all-others", {
+        method: "POST"
+      });
+
+      showToast("Outras sessões revogadas.");
+      await loadAccount();
+    } catch (error) {
+      showToast(error.message);
+      if (error.message === "mfa_required") await loadMfaStatus();
+    }
+  });
+
+  document.querySelectorAll("[data-toast]").forEach(button => {
+    button.addEventListener("click", () => showToast(button.dataset.toast));
+  });
+
+  document.querySelectorAll("[data-toggle-password]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.togglePassword);
+      if (!input) return;
+
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      button.textContent = isPassword ? "Ocultar" : "Mostrar";
+    });
+  });
+
+  setMode("login");
+  handleUrlError();
+  loadAccount();
+</script>
 </body>
 </html>
