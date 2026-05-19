@@ -2,105 +2,38 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Permitir acesso — Lukintosh Account</title>
+  <title>Lukintosh Account</title>
 
-  <meta
-    name="description"
-    content="Autorize serviços da Lukintosh a usar sua Lukintosh Account."
-  />
+  <meta name="description" content="Sign in to your Lukintosh Account." />
+  <meta name="robots" content="index, follow" />
 
-  <meta
-    name="robots"
-    content="noindex, nofollow"
-  />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <meta
-    name="theme-color"
-    content="#000000"
-  />
-
-  <meta
-    property="og:title"
-    content="Lukintosh Account"
-  />
-
-  <meta
-    property="og:description"
-    content="Permissão segura para serviços Lukintosh."
-  />
-
-  <meta
-    property="og:type"
-    content="website"
-  />
-
-  <meta
-    property="og:site_name"
-    content="Lukintosh"
-  />
-
-  <link
-    rel="preconnect"
-    href="https://fonts.googleapis.com"
-  />
-
-  <link
-    rel="preconnect"
-    href="https://fonts.gstatic.com"
-    crossorigin
-  />
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet"
-  />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    :root{
-      --bg:#000000;
-      --panel:rgba(15,15,18,.82);
-      --panel-strong:rgba(22,22,26,.94);
-      --panel-soft:rgba(255,255,255,.055);
-      --panel-softer:rgba(255,255,255,.035);
-      --border:rgba(255,255,255,.14);
-      --border-soft:rgba(255,255,255,.09);
-      --text:#ffffff;
-      --muted:rgba(255,255,255,.62);
-      --muted-2:rgba(255,255,255,.42);
-      --muted-3:rgba(255,255,255,.28);
-      --success:#78ff9f;
-      --danger:#ff8a8a;
-      --warning:#ffd479;
-      --blue:#6aa9ff;
-      --purple:#b18cff;
-      --shadow:0 30px 90px rgba(0,0,0,.58);
-      --radius-xl:30px;
-      --radius-lg:22px;
-      --radius-md:16px;
-      --radius-sm:12px;
-      --max:1180px;
-    }
-
     *{
       box-sizing:border-box;
     }
 
-    html{
-      min-height:100%;
-      background:#000;
-    }
-
-    body{
+    html, body{
       margin:0;
-      min-height:100vh;
+      min-height:100%;
       background:#000;
       color:#fff;
       font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
       overflow-x:hidden;
     }
 
@@ -109,13 +42,11 @@
       position:fixed;
       inset:-40%;
       background:
-        radial-gradient(circle at 14% 18%, rgba(0,112,255,.28), transparent 28%),
-        radial-gradient(circle at 86% 8%, rgba(128,80,255,.24), transparent 30%),
-        radial-gradient(circle at 50% 96%, rgba(255,255,255,.10), transparent 26%),
-        radial-gradient(circle at 80% 80%, rgba(255,255,255,.04), transparent 24%);
-      filter:blur(24px);
-      z-index:-3;
-      animation:bgMove 18s ease-in-out infinite alternate;
+        radial-gradient(circle at 20% 20%, rgba(0,112,255,.28), transparent 32%),
+        radial-gradient(circle at 80% 10%, rgba(130,80,255,.22), transparent 30%),
+        radial-gradient(circle at 50% 100%, rgba(255,255,255,.12), transparent 28%);
+      filter:blur(20px);
+      z-index:-2;
     }
 
     body::after{
@@ -125,1187 +56,419 @@
       background:
         linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-      background-size:54px 54px;
-      mask-image:linear-gradient(to bottom, rgba(0,0,0,.95), transparent 88%);
-      z-index:-2;
-      pointer-events:none;
+      background-size:48px 48px;
+      mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent);
+      z-index:-1;
     }
 
-    @keyframes bgMove{
-      0%{
-        transform:translate3d(0,0,0) scale(1);
-      }
-      100%{
-        transform:translate3d(2%, -2%, 0) scale(1.04);
-      }
-    }
-
-    a{
-      color:inherit;
-    }
-
-    button{
-      font-family:inherit;
-    }
-
-    .page{
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-    }
-
-    .topbar{
-      position:sticky;
-      top:0;
-      z-index:20;
-      backdrop-filter:blur(20px);
-      background:linear-gradient(
-        to bottom,
-        rgba(0,0,0,.76),
-        rgba(0,0,0,.42)
-      );
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
-
-    .topbar-inner{
-      width:min(var(--max), calc(100vw - 40px));
-      margin:0 auto;
-      min-height:72px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:20px;
+    .shell{
+      width:100%;
+      max-width:460px;
     }
 
     .brand{
       display:flex;
       align-items:center;
       gap:12px;
-      text-decoration:none;
+      margin-bottom:18px;
+      justify-content:center;
     }
 
     .brand-mark{
-      width:40px;
-      height:40px;
-      border-radius:14px;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,1), rgba(160,160,160,.92));
-      box-shadow:
-        0 0 40px rgba(255,255,255,.22),
-        inset 0 1px 0 rgba(255,255,255,.85);
-      position:relative;
-      overflow:hidden;
-    }
-
-    .brand-mark::after{
-      content:"";
-      position:absolute;
-      inset:2px;
+      width:38px;
+      height:38px;
       border-radius:12px;
-      background:
-        radial-gradient(circle at 30% 20%, rgba(255,255,255,.65), transparent 32%),
-        linear-gradient(135deg, transparent, rgba(0,0,0,.22));
-      opacity:.88;
+      background:linear-gradient(135deg, #fff, #8f8f8f);
+      box-shadow:0 0 40px rgba(255,255,255,.28);
     }
 
-    .brand-copy{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-    }
-
-    .brand-name{
+    .brand-text{
       font-size:15px;
-      font-weight:900;
+      font-weight:800;
       letter-spacing:.16em;
       text-transform:uppercase;
-      line-height:1;
-    }
-
-    .brand-sub{
-      font-size:11px;
-      color:var(--muted-2);
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-
-    .top-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-
-    .top-pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      height:36px;
-      padding:0 13px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.055);
-      color:rgba(255,255,255,.72);
-      font-size:12px;
-      font-weight:700;
-      letter-spacing:.02em;
-      white-space:nowrap;
-    }
-
-    .status-dot{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:var(--success);
-      box-shadow:0 0 18px rgba(120,255,159,.65);
-    }
-
-    .main{
-      flex:1;
-      width:min(var(--max), calc(100vw - 40px));
-      margin:0 auto;
-      padding:46px 0 38px;
-      display:grid;
-      grid-template-columns:minmax(0, 1.02fr) minmax(360px, .72fr);
-      gap:28px;
-      align-items:start;
-    }
-
-    .hero{
-      min-height:calc(100vh - 160px);
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      gap:24px;
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:9px;
-      width:max-content;
-      padding:9px 12px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.055);
-      color:rgba(255,255,255,.72);
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-    }
-
-    .eyebrow-light{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:#fff;
-      box-shadow:0 0 22px rgba(255,255,255,.8);
-    }
-
-    .hero h1{
-      margin:0;
-      max-width:720px;
-      font-size:clamp(44px, 6.4vw, 84px);
-      line-height:.92;
-      letter-spacing:-.075em;
-      font-weight:900;
-    }
-
-    .hero h1 span{
-      color:rgba(255,255,255,.54);
-    }
-
-    .hero-desc{
-      max-width:640px;
-      color:rgba(255,255,255,.68);
-      font-size:18px;
-      line-height:1.65;
-      margin:0;
-    }
-
-    .hero-grid{
-      display:grid;
-      grid-template-columns:repeat(3, minmax(0,1fr));
-      gap:12px;
-      max-width:720px;
-      margin-top:6px;
-    }
-
-    .metric{
-      border:1px solid rgba(255,255,255,.1);
-      background:rgba(255,255,255,.045);
-      border-radius:18px;
-      padding:16px;
-      min-height:106px;
-    }
-
-    .metric-label{
-      font-size:11px;
-      color:var(--muted-2);
-      text-transform:uppercase;
-      letter-spacing:.12em;
-      font-weight:800;
-      margin-bottom:10px;
-    }
-
-    .metric-value{
-      font-size:22px;
-      font-weight:900;
-      letter-spacing:-.04em;
-    }
-
-    .metric-text{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.45;
-      margin-top:6px;
-    }
-
-    .side{
-      position:sticky;
-      top:100px;
-      align-self:start;
     }
 
     .card{
       width:100%;
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:var(--radius-xl);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(24px);
-      overflow:hidden;
-    }
-
-    .card-header{
-      padding:26px 28px 0;
+      background:rgba(15,15,18,.82);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:28px;
+      padding:30px;
+      box-shadow:0 30px 90px rgba(0,0,0,.55);
+      backdrop-filter:blur(22px);
     }
 
     .kicker{
       color:#8a8a8a;
       font-size:12px;
-      font-weight:800;
-      letter-spacing:.15em;
+      font-weight:700;
+      letter-spacing:.14em;
       text-transform:uppercase;
+      margin-bottom:12px;
+    }
+
+    h1{
+      margin:0 0 10px;
+      font-size:30px;
+      line-height:1.05;
+      letter-spacing:-.04em;
+    }
+
+    .desc{
+      margin:0 0 24px;
+      color:rgba(255,255,255,.68);
+      font-size:15px;
+      line-height:1.55;
+    }
+
+    label{
+      display:block;
+      font-size:13px;
+      color:rgba(255,255,255,.72);
+      margin-bottom:8px;
+      font-weight:600;
+    }
+
+    input{
+      width:100%;
+      height:48px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      padding:0 14px;
+      outline:none;
+      font-size:15px;
       margin-bottom:14px;
+    }
+
+    input:focus{
+      border-color:rgba(255,255,255,.38);
+      background:rgba(255,255,255,.09);
+    }
+
+    button, .button{
+      width:100%;
+      height:48px;
+      border:0;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:700;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      transition:.2s ease;
+    }
+
+    .primary{
+      background:#fff;
+      color:#000;
+    }
+
+    .primary:hover{
+      transform:translateY(-1px);
+      box-shadow:0 12px 40px rgba(255,255,255,.14);
+    }
+
+    .secondary{
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.14);
+    }
+
+    .secondary:hover{
+      background:rgba(255,255,255,.12);
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+    }
+
+    .row button{
+      flex:1;
+    }
+
+    .divider{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin:20px 0;
+      color:rgba(255,255,255,.36);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      font-weight:700;
+    }
+
+    .divider::before,
+    .divider::after{
+      content:"";
+      height:1px;
+      flex:1;
+      background:rgba(255,255,255,.12);
+    }
+
+    .status{
+      margin-top:16px;
+      min-height:20px;
+      font-size:13px;
+      color:rgba(255,255,255,.66);
+      line-height:1.4;
+    }
+
+    .status.error{
+      color:#ff8a8a;
+    }
+
+    .status.success{
+      color:#b7ffce;
+    }
+
+    .permissions{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      padding:14px;
+      margin:20px 0 22px;
+    }
+
+    .permission{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:8px 0;
+      color:rgba(255,255,255,.78);
+      font-size:14px;
+      line-height:1.4;
+    }
+
+    .check{
+      color:#fff;
+      opacity:.85;
+      width:18px;
+      flex:none;
     }
 
     .app-pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding:8px 11px;
+      padding:8px 10px;
       border-radius:999px;
-      background:rgba(255,255,255,.075);
+      background:rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.12);
       font-size:13px;
-      color:rgba(255,255,255,.84);
-      margin-bottom:18px;
-      max-width:100%;
+      color:rgba(255,255,255,.82);
+      margin-bottom:16px;
     }
 
-    .app-pill span:last-child{
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:260px;
-    }
-
-    .green-dot{
+    .dot{
       width:8px;
       height:8px;
       border-radius:999px;
-      background:var(--success);
-      box-shadow:0 0 20px rgba(120,255,159,.6);
-      flex:none;
+      background:#78ff9f;
+      box-shadow:0 0 20px rgba(120,255,159,.55);
     }
 
-    .consent-title{
-      margin:0 0 11px;
-      font-size:31px;
-      line-height:1.04;
-      letter-spacing:-.055em;
-      font-weight:900;
+    .hidden{
+      display:none !important;
     }
 
-    .consent-desc{
-      margin:0;
-      color:rgba(255,255,255,.66);
-      font-size:15px;
-      line-height:1.58;
-    }
-
-    .card-body{
-      padding:22px 28px 28px;
-    }
-
-    .profile-line{
-      display:flex;
-      align-items:center;
-      gap:13px;
-      padding:14px;
-      border-radius:19px;
-      background:rgba(255,255,255,.058);
-      border:1px solid rgba(255,255,255,.1);
-      margin-bottom:16px;
-    }
-
-    .avatar{
-      width:44px;
-      height:44px;
-      border-radius:50%;
-      background:
-        radial-gradient(circle at 32% 24%, #fff, rgba(255,255,255,.54) 34%, rgba(120,120,120,.9) 68%, rgba(50,50,50,1));
-      flex:none;
-      box-shadow:0 0 32px rgba(255,255,255,.16);
-    }
-
-    .profile-main{
-      min-width:0;
-    }
-
-    .profile-name{
-      font-weight:800;
-      font-size:14px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    .profile-email{
-      color:rgba(255,255,255,.52);
-      font-size:13px;
-      margin-top:3px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    .permissions{
-      background:rgba(255,255,255,.055);
-      border:1px solid rgba(255,255,255,.095);
-      border-radius:20px;
-      padding:8px 14px;
-      margin:16px 0;
-    }
-
-    .permission{
-      display:flex;
-      gap:11px;
-      align-items:flex-start;
-      padding:12px 0;
-      color:rgba(255,255,255,.78);
-      font-size:14px;
-      line-height:1.43;
-      border-bottom:1px solid rgba(255,255,255,.075);
-    }
-
-    .permission:last-child{
-      border-bottom:0;
-    }
-
-    .check{
-      color:#fff;
-      opacity:.88;
-      width:18px;
-      flex:none;
-      font-weight:900;
-    }
-
-    .security-note{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:14px;
-      border-radius:18px;
-      border:1px solid rgba(120,255,159,.18);
-      background:rgba(120,255,159,.06);
-      margin:16px 0 18px;
-    }
-
-    .security-icon{
-      width:24px;
-      height:24px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(120,255,159,.12);
-      color:var(--success);
-      flex:none;
-      font-size:13px;
-      font-weight:900;
-    }
-
-    .security-note strong{
-      display:block;
-      font-size:13px;
-      margin-bottom:3px;
-    }
-
-    .security-note span{
-      display:block;
-      color:rgba(255,255,255,.6);
-      font-size:12.5px;
-      line-height:1.45;
-    }
-
-    .actions{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-      margin-top:14px;
-    }
-
-    .btn{
-      height:50px;
-      border:0;
-      border-radius:16px;
-      font-size:15px;
-      font-weight:800;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition:
-        transform .18s ease,
-        box-shadow .18s ease,
-        background .18s ease,
-        border-color .18s ease;
-    }
-
-    .btn-primary{
-      background:#fff;
-      color:#000;
-      box-shadow:0 12px 35px rgba(255,255,255,.12);
-    }
-
-    .btn-primary:hover{
-      transform:translateY(-1px);
-      box-shadow:0 18px 48px rgba(255,255,255,.18);
-    }
-
-    .btn-secondary{
-      background:rgba(255,255,255,.075);
-      color:#fff;
-      border:1px solid rgba(255,255,255,.14);
-    }
-
-    .btn-secondary:hover{
-      background:rgba(255,255,255,.11);
-      transform:translateY(-1px);
-    }
-
-    .status{
-      min-height:20px;
-      margin-top:15px;
-      font-size:13px;
-      line-height:1.45;
-      color:rgba(255,255,255,.62);
-    }
-
-    .status.error{
-      color:var(--danger);
-    }
-
-    .status.success{
-      color:var(--success);
-    }
-
-    .panel-row{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-      margin-top:12px;
-    }
-
-    .mini-panel{
-      border:1px solid rgba(255,255,255,.095);
-      background:rgba(255,255,255,.04);
-      border-radius:18px;
-      padding:14px;
-    }
-
-    .mini-label{
-      font-size:10px;
-      color:var(--muted-2);
-      text-transform:uppercase;
-      letter-spacing:.12em;
-      font-weight:900;
-      margin-bottom:8px;
-    }
-
-    .mini-value{
-      font-size:13px;
-      color:rgba(255,255,255,.8);
-      line-height:1.35;
-      word-break:break-word;
-    }
-
-    .info-section{
-      margin-top:26px;
-      display:grid;
-      grid-template-columns:repeat(3, minmax(0,1fr));
-      gap:14px;
-    }
-
-    .info-card{
-      border:1px solid rgba(255,255,255,.095);
-      background:rgba(255,255,255,.04);
-      border-radius:22px;
-      padding:18px;
-      min-height:160px;
-    }
-
-    .info-icon{
-      width:34px;
-      height:34px;
-      border-radius:12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.1);
-      margin-bottom:16px;
-      font-size:16px;
-    }
-
-    .info-title{
-      font-size:15px;
-      font-weight:900;
-      letter-spacing:-.02em;
-      margin-bottom:8px;
-    }
-
-    .info-text{
-      color:rgba(255,255,255,.58);
-      font-size:13px;
-      line-height:1.55;
-    }
-
-    .details{
-      width:min(var(--max), calc(100vw - 40px));
-      margin:0 auto;
-      padding:10px 0 60px;
-    }
-
-    .details-grid{
-      display:grid;
-      grid-template-columns:1.2fr .8fr;
-      gap:18px;
-    }
-
-    .detail-card{
-      border:1px solid rgba(255,255,255,.095);
-      background:rgba(255,255,255,.045);
-      border-radius:26px;
-      padding:24px;
-      backdrop-filter:blur(18px);
-    }
-
-    .detail-card h2{
-      margin:0 0 10px;
-      font-size:24px;
-      letter-spacing:-.04em;
-    }
-
-    .detail-card p{
-      margin:0;
-      color:rgba(255,255,255,.6);
-      font-size:14px;
-      line-height:1.65;
-    }
-
-    .log-list{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
+    .footer-note{
+      text-align:center;
       margin-top:18px;
-    }
-
-    .log-item{
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-      padding:12px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.16);
-    }
-
-    .log-dot{
-      width:9px;
-      height:9px;
-      border-radius:50%;
-      background:#fff;
-      margin-top:5px;
-      flex:none;
-      opacity:.8;
-    }
-
-    .log-item strong{
-      display:block;
-      font-size:13px;
-      margin-bottom:3px;
-    }
-
-    .log-item span{
-      display:block;
-      color:rgba(255,255,255,.52);
-      font-size:12px;
-      line-height:1.45;
-    }
-
-    .legal-list{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      margin-top:18px;
-    }
-
-    .legal-link{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:12px 14px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.09);
-      background:rgba(0,0,0,.14);
-      color:rgba(255,255,255,.76);
-      text-decoration:none;
-      font-size:13px;
-      font-weight:700;
-    }
-
-    .legal-link:hover{
-      background:rgba(255,255,255,.07);
-    }
-
-    .footer{
-      border-top:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.42);
-      backdrop-filter:blur(18px);
-    }
-
-    .footer-inner{
-      width:min(var(--max), calc(100vw - 40px));
-      margin:0 auto;
-      padding:28px 0;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:20px;
       color:rgba(255,255,255,.42);
       font-size:12px;
       line-height:1.5;
     }
 
-    .footer-links{
-      display:flex;
-      align-items:center;
-      gap:16px;
-      flex-wrap:wrap;
-    }
-
-    .footer-links a{
-      color:rgba(255,255,255,.56);
+    .footer-note a{
+      color:rgba(255,255,255,.7);
       text-decoration:none;
     }
 
-    .footer-links a:hover{
-      color:#fff;
+    .profile-line{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin:18px 0 22px;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
     }
 
-    .debug-panel{
-      display:none;
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      width:min(420px, calc(100vw - 36px));
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(10,10,12,.92);
-      border-radius:20px;
-      padding:16px;
-      z-index:60;
-      box-shadow:0 20px 70px rgba(0,0,0,.55);
-      backdrop-filter:blur(20px);
+    .avatar{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background:linear-gradient(135deg, #fff, #6f6f6f);
+      flex:none;
     }
 
-    .debug-panel.show{
-      display:block;
-    }
-
-    .debug-title{
-      font-size:12px;
-      font-weight:900;
-      letter-spacing:.13em;
-      text-transform:uppercase;
-      color:rgba(255,255,255,.46);
-      margin-bottom:10px;
-    }
-
-    .debug-panel pre{
-      margin:0;
-      max-height:260px;
-      overflow:auto;
-      color:rgba(255,255,255,.7);
-      font-size:11px;
-      line-height:1.55;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:22px;
-      transform:translateX(-50%) translateY(20px);
-      opacity:0;
-      pointer-events:none;
-      padding:12px 15px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(15,15,18,.9);
-      color:rgba(255,255,255,.82);
-      font-size:13px;
+    .profile-name{
       font-weight:700;
-      box-shadow:0 20px 60px rgba(0,0,0,.45);
-      backdrop-filter:blur(18px);
-      transition:.25s ease;
-      z-index:80;
+      font-size:14px;
     }
 
-    .toast.show{
-      opacity:1;
-      transform:translateX(-50%) translateY(0);
+    .profile-email{
+      color:rgba(255,255,255,.55);
+      font-size:13px;
+      margin-top:2px;
+      word-break:break-all;
     }
 
-    @media(max-width:980px){
-      .main{
-        grid-template-columns:1fr;
-        padding-top:28px;
+    @media(max-width:520px){
+      .card{
+        padding:24px;
+        border-radius:24px;
       }
 
-      .hero{
-        min-height:auto;
-        padding:30px 0 0;
-      }
-
-      .side{
-        position:relative;
-        top:auto;
-      }
-
-      .details-grid{
-        grid-template-columns:1fr;
-      }
-
-      .info-section{
-        grid-template-columns:1fr;
-      }
-    }
-
-    @media(max-width:720px){
-      .topbar-inner{
-        width:min(var(--max), calc(100vw - 28px));
-      }
-
-      .main,
-      .details,
-      .footer-inner{
-        width:min(var(--max), calc(100vw - 28px));
-      }
-
-      .top-actions{
-        display:none;
-      }
-
-      .hero h1{
-        font-size:44px;
-      }
-
-      .hero-desc{
-        font-size:16px;
-      }
-
-      .hero-grid{
-        grid-template-columns:1fr;
-      }
-
-      .card-header,
-      .card-body{
-        padding-left:22px;
-        padding-right:22px;
-      }
-
-      .actions{
-        grid-template-columns:1fr;
-      }
-
-      .panel-row{
-        grid-template-columns:1fr;
-      }
-
-      .footer-inner{
-        flex-direction:column;
-        align-items:flex-start;
-      }
-    }
-
-    @media(max-width:420px){
-      .hero h1{
-        font-size:38px;
-      }
-
-      .consent-title{
+      h1{
         font-size:27px;
       }
 
-      .card{
-        border-radius:24px;
+      .row{
+        flex-direction:column;
       }
     }
   </style>
 </head>
 
 <body>
-  <div class="page">
-    <header class="topbar">
-      <div class="topbar-inner">
-        <a class="brand" href="https://lukintosh.com/">
-          <div class="brand-mark" aria-hidden="true"></div>
+  <main class="shell">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">Lukintosh</div>
+    </div>
 
-          <div class="brand-copy">
-            <div class="brand-name">Lukintosh</div>
-            <div class="brand-sub">Account Permission</div>
-          </div>
-        </a>
-
-        <div class="top-actions">
-          <div class="top-pill">
-            <span class="status-dot"></span>
-            <span>Secure permission flow</span>
-          </div>
-
-          <div class="top-pill" id="topAppPill">
-            Developer
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main class="main">
-      <section class="hero">
-        <div class="eyebrow">
-          <span class="eyebrow-light"></span>
-          <span>Lukintosh Account</span>
-        </div>
-
-        <h1>
-          Autorize uma vez.
-          <span>Continue sem repetir entrada.</span>
-        </h1>
-
-        <p class="hero-desc">
-          Esta página permite que serviços da Lukintosh reconheçam sua conta e
-          continuem a experiência sem pedir uma nova etapa de entrada toda vez.
-          O acesso só é enviado para domínios permitidos da Lukintosh.
-        </p>
-
-        <div class="hero-grid">
-          <div class="metric">
-            <div class="metric-label">Flow</div>
-            <div class="metric-value">SSO-like</div>
-            <div class="metric-text">
-              Permissão centralizada para serviços Lukintosh.
-            </div>
-          </div>
-
-          <div class="metric">
-            <div class="metric-label">Redirect</div>
-            <div class="metric-value">Allowlist</div>
-            <div class="metric-text">
-              Apenas destinos autorizados recebem o retorno.
-            </div>
-          </div>
-
-          <div class="metric">
-            <div class="metric-label">Account</div>
-            <div class="metric-value">LukID</div>
-            <div class="metric-text">
-              Identidade visual unificada para o ecossistema.
-            </div>
-          </div>
-        </div>
-
-        <div class="info-section">
-          <div class="info-card">
-            <div class="info-icon">↗</div>
-            <div class="info-title">Volta automática</div>
-            <div class="info-text">
-              Após permitir, o usuário retorna ao serviço que iniciou a
-              autorização, como Developer, Support, Store ou Cloud.
-            </div>
-          </div>
-
-          <div class="info-card">
-            <div class="info-icon">✓</div>
-            <div class="info-title">Sem tela de login</div>
-            <div class="info-text">
-              Esta versão é somente de permissão. Ela não mostra formulário
-              de e-mail, senha ou login social.
-            </div>
-          </div>
-
-          <div class="info-card">
-            <div class="info-icon">⌁</div>
-            <div class="info-title">Experiência corporativa</div>
-            <div class="info-text">
-              Visual limpo, consentimento explícito e linguagem de plataforma
-              para parecer uma central de contas de empresa grande.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <aside class="side">
-        <section class="card" aria-labelledby="consentTitle">
-          <div class="card-header">
-            <div class="kicker">Lukintosh Account</div>
-
-            <div class="app-pill">
-              <span class="green-dot"></span>
-              <span id="appPillText">Lukintosh Developer</span>
-            </div>
-
-            <h2 class="consent-title" id="consentTitle">
-              Permitir acesso?
-            </h2>
-
-            <p class="consent-desc" id="consentDesc">
-              Um serviço da Lukintosh quer usar sua conta para continuar.
-            </p>
-          </div>
-
-          <div class="card-body">
-            <div class="profile-line">
-              <div class="avatar" aria-hidden="true"></div>
-
-              <div class="profile-main">
-                <div class="profile-name" id="profileName">
-                  Lukintosh User
-                </div>
-
-                <div class="profile-email" id="profileEmail">
-                  Signed in with Lukintosh
-                </div>
-              </div>
-            </div>
-
-            <div class="permissions">
-              <div class="permission">
-                <span class="check">✓</span>
-                <span>
-                  Confirmar que você está usando uma Lukintosh Account.
-                </span>
-              </div>
-
-              <div class="permission">
-                <span class="check">✓</span>
-                <span>
-                  Permitir que este serviço reconheça sua identidade Lukintosh.
-                </span>
-              </div>
-
-              <div class="permission">
-                <span class="check">✓</span>
-                <span>
-                  Continuar para o serviço sem repetir a etapa de entrada.
-                </span>
-              </div>
-
-              <div class="permission">
-                <span class="check">✓</span>
-                <span>
-                  Usar somente destinos autorizados em domínios Lukintosh.
-                </span>
-              </div>
-            </div>
-
-            <div class="security-note">
-              <div class="security-icon">i</div>
-
-              <div>
-                <strong>Permissão limitada</strong>
-                <span>
-                  Esta tela não compartilha senha. Ela apenas confirma a
-                  continuação para um serviço autorizado da Lukintosh.
-                </span>
-              </div>
-            </div>
-
-            <div class="panel-row">
-              <div class="mini-panel">
-                <div class="mini-label">Aplicativo</div>
-                <div class="mini-value" id="miniApp">
-                  developer
-                </div>
-              </div>
-
-              <div class="mini-panel">
-                <div class="mini-label">Destino</div>
-                <div class="mini-value" id="miniRedirect">
-                  developer.lukintosh.com
-                </div>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button
-                class="btn btn-secondary"
-                type="button"
-                id="denyBtn"
-              >
-                Cancelar
-              </button>
-
-              <button
-                class="btn btn-primary"
-                type="button"
-                id="allowBtn"
-              >
-                Permitir
-              </button>
-            </div>
-
-            <div
-              class="status"
-              id="status"
-              role="status"
-              aria-live="polite"
-            ></div>
-          </div>
-        </section>
-      </aside>
-    </main>
-
-    <section class="details">
-      <div class="details-grid">
-        <div class="detail-card">
-          <h2>O que acontece ao permitir?</h2>
-
-          <p>
-            O serviço solicitante recebe um retorno simples dizendo que a
-            permissão foi concedida. A página adiciona parâmetros na URL de
-            retorno para o serviço reconhecer que o usuário autorizou a
-            continuação.
-          </p>
-
-          <div class="log-list">
-            <div class="log-item">
-              <div class="log-dot"></div>
-              <div>
-                <strong>1. O serviço abre a Lukintosh Account</strong>
-                <span>
-                  Exemplo: Developer manda o usuário para esta página de
-                  permissão com app e redirect.
-                </span>
-              </div>
-            </div>
-
-            <div class="log-item">
-              <div class="log-dot"></div>
-              <div>
-                <strong>2. A pessoa permite ou cancela</strong>
-                <span>
-                  O usuário escolhe se quer continuar para o serviço.
-                </span>
-              </div>
-            </div>
-
-            <div class="log-item">
-              <div class="log-dot"></div>
-              <div>
-                <strong>3. A página retorna para o destino permitido</strong>
-                <span>
-                  O retorno acontece somente para domínios da allowlist.
-                </span>
-              </div>
-            </div>
-
-            <div class="log-item">
-              <div class="log-dot"></div>
-              <div>
-                <strong>4. O serviço recebe o resultado</strong>
-                <span>
-                  A URL volta com lukintosh_sso=success ou lukintosh_sso=denied.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <h2>Central de confiança</h2>
-
-          <p>
-            Este fluxo é visual e front-end. Para autenticação real entre
-            subdomínios, o ideal no futuro é usar backend, cookie global seguro
-            e tokens assinados.
-          </p>
-
-          <div class="legal-list">
-            <a class="legal-link" href="https://lukintosh.com/privacy">
-              <span>Privacy Policy</span>
-              <span>↗</span>
-            </a>
-
-            <a class="legal-link" href="https://lukintosh.com/terms">
-              <span>Terms of Use</span>
-              <span>↗</span>
-            </a>
-
-            <a class="legal-link" href="https://lukintosh.com/security">
-              <span>Security</span>
-              <span>↗</span>
-            </a>
-
-            <a class="legal-link" href="https://support.lukintosh.com">
-              <span>Support</span>
-              <span>↗</span>
-            </a>
-          </div>
-        </div>
-      </div>
+    <section id="loadingView" class="card">
+      <div class="kicker">Lukintosh Account</div>
+      <h1>Carregando...</h1>
+      <p class="desc">Verificando sua sessão com segurança.</p>
+      <div class="status">Aguarde um instante.</div>
     </section>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <div>
-          © 2026 Lukintosh Corporation. Secure permission flow for Lukintosh services.
-        </div>
+    <section id="loginView" class="card hidden">
+      <div class="kicker">Lukintosh Account</div>
+      <h1>Entrar</h1>
+      <p class="desc" id="loginDesc">
+        Entre para continuar usando serviços da Lukintosh.
+      </p>
 
-        <div class="footer-links">
-          <a href="https://lukintosh.com/">Lukintosh</a>
-          <a href="https://developer.lukintosh.com/">Developer</a>
-          <a href="https://support.lukintosh.com/">Support</a>
-          <a href="tel:+18888645712">+1-888-864-5712</a>
+      <form id="loginForm">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" autocomplete="email" placeholder="you@lukintosh.com" required />
+
+        <label for="password">Senha</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+
+        <button class="primary" type="submit" id="loginSubmit">
+          Entrar
+        </button>
+      </form>
+
+      <div class="divider">ou</div>
+
+      <button class="secondary" type="button" id="googleBtn">
+        Continuar com Google
+      </button>
+
+      <div class="status" id="loginStatus"></div>
+    </section>
+
+    <section id="consentView" class="card hidden">
+      <div class="kicker">Lukintosh Account</div>
+
+      <div class="app-pill">
+        <span class="dot"></span>
+        <span id="appPillText">Serviço Lukintosh</span>
+      </div>
+
+      <h1 id="consentTitle">Permitir acesso?</h1>
+      <p class="desc" id="consentDesc">
+        Um serviço da Lukintosh quer usar sua conta para continuar.
+      </p>
+
+      <div class="profile-line">
+        <div class="avatar"></div>
+        <div>
+          <div class="profile-name" id="profileName">Lukintosh User</div>
+          <div class="profile-email" id="profileEmail">user@lukintosh.com</div>
         </div>
       </div>
-    </footer>
-  </div>
 
-  <div class="debug-panel" id="debugPanel">
-    <div class="debug-title">Debug</div>
-    <pre id="debugOutput"></pre>
-  </div>
+      <div class="permissions">
+        <div class="permission">
+          <span class="check">✓</span>
+          <span>Confirmar que você está logado.</span>
+        </div>
+        <div class="permission">
+          <span class="check">✓</span>
+          <span>Compartilhar seu nome e e-mail com este serviço Lukintosh.</span>
+        </div>
+        <div class="permission">
+          <span class="check">✓</span>
+          <span>Permitir continuar sem fazer login novamente agora.</span>
+        </div>
+      </div>
 
-  <div class="toast" id="toast">
-    Permissão salva.
-  </div>
+      <div class="row">
+        <button class="secondary" type="button" id="denyBtn">
+          Cancelar
+        </button>
+
+        <button class="primary" type="button" id="allowBtn">
+          Permitir
+        </button>
+      </div>
+
+      <div class="status" id="consentStatus"></div>
+    </section>
+
+    <section id="dashboardView" class="card hidden">
+      <div class="kicker">Lukintosh Account</div>
+      <h1>Minha Conta</h1>
+      <p class="desc">
+        Você está conectado à sua Lukintosh Account.
+      </p>
+
+      <div class="profile-line">
+        <div class="avatar"></div>
+        <div>
+          <div class="profile-name" id="dashName">Lukintosh User</div>
+          <div class="profile-email" id="dashEmail">user@lukintosh.com</div>
+        </div>
+      </div>
+
+      <button class="secondary" type="button" id="logoutBtn">
+        Sair
+      </button>
+
+      <div class="status" id="dashboardStatus"></div>
+    </section>
+
+    <div class="footer-note">
+      © 2026 Lukintosh Corporation. Secure sign-in for Lukintosh services.
+    </div>
+  </main>
 
   <script>
+    const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
+    const SUPABASE_ANON_KEY = "SUA_SUPABASE_ANON_KEY";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+
     const allowedRedirectHosts = [
       "lukintosh.com",
       "www.lukintosh.com",
@@ -1314,14 +477,7 @@
       "store.lukintosh.com",
       "cloud.lukintosh.com",
       "myaccount.lukintosh.com",
-      "myaccounts.lukintosh.com",
-      "accounts.lukintosh.com",
-      "status.lukintosh.com",
-      "security.lukintosh.com",
-      "trust.lukintosh.com",
-      "docs.lukintosh.com",
-      "console.lukintosh.com",
-      "dashboard.lukintosh.com"
+      "myaccounts.lukintosh.com"
     ];
 
     const appNames = {
@@ -1330,434 +486,341 @@
       store: "Lukintosh Store",
       cloud: "Lukintosh Cloud",
       accounts: "Lukintosh Accounts",
-      account: "Lukintosh Account",
-      lukintosh: "Lukintosh",
-      docs: "Lukintosh Docs",
-      console: "Lukintosh Console",
-      dashboard: "Lukintosh Dashboard",
-      security: "Lukintosh Security",
-      trust: "Lukintosh Trust Center",
-      status: "Lukintosh Status"
+      lukintosh: "Lukintosh"
     };
 
-    const defaultRedirects = {
-      developer: "https://developer.lukintosh.com/",
-      support: "https://support.lukintosh.com/",
-      store: "https://store.lukintosh.com/",
-      cloud: "https://cloud.lukintosh.com/",
-      accounts: "https://myaccount.lukintosh.com/",
-      account: "https://myaccount.lukintosh.com/",
-      lukintosh: "https://lukintosh.com/",
-      docs: "https://docs.lukintosh.com/",
-      console: "https://console.lukintosh.com/",
-      dashboard: "https://dashboard.lukintosh.com/",
-      security: "https://security.lukintosh.com/",
-      trust: "https://trust.lukintosh.com/",
-      status: "https://status.lukintosh.com/"
+    const views = {
+      loading: document.getElementById("loadingView"),
+      login: document.getElementById("loginView"),
+      consent: document.getElementById("consentView"),
+      dashboard: document.getElementById("dashboardView")
     };
 
-    const appHostMap = {
-      "developer.lukintosh.com": "developer",
-      "support.lukintosh.com": "support",
-      "store.lukintosh.com": "store",
-      "cloud.lukintosh.com": "cloud",
-      "myaccount.lukintosh.com": "accounts",
-      "myaccounts.lukintosh.com": "accounts",
-      "accounts.lukintosh.com": "accounts",
-      "lukintosh.com": "lukintosh",
-      "www.lukintosh.com": "lukintosh",
-      "docs.lukintosh.com": "docs",
-      "console.lukintosh.com": "console",
-      "dashboard.lukintosh.com": "dashboard",
-      "security.lukintosh.com": "security",
-      "trust.lukintosh.com": "trust",
-      "status.lukintosh.com": "status"
-    };
+    const loginForm = document.getElementById("loginForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginSubmit = document.getElementById("loginSubmit");
+    const googleBtn = document.getElementById("googleBtn");
+    const loginStatus = document.getElementById("loginStatus");
 
     const appPillText = document.getElementById("appPillText");
-    const topAppPill = document.getElementById("topAppPill");
     const consentTitle = document.getElementById("consentTitle");
     const consentDesc = document.getElementById("consentDesc");
     const profileName = document.getElementById("profileName");
     const profileEmail = document.getElementById("profileEmail");
-    const miniApp = document.getElementById("miniApp");
-    const miniRedirect = document.getElementById("miniRedirect");
     const allowBtn = document.getElementById("allowBtn");
     const denyBtn = document.getElementById("denyBtn");
-    const statusEl = document.getElementById("status");
-    const debugPanel = document.getElementById("debugPanel");
-    const debugOutput = document.getElementById("debugOutput");
-    const toast = document.getElementById("toast");
+    const consentStatus = document.getElementById("consentStatus");
+
+    const dashName = document.getElementById("dashName");
+    const dashEmail = document.getElementById("dashEmail");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const dashboardStatus = document.getElementById("dashboardStatus");
+
+    function showView(name){
+      Object.values(views).forEach(view => view.classList.add("hidden"));
+      views[name].classList.remove("hidden");
+    }
+
+    function setStatus(element, message, type){
+      element.textContent = message || "";
+      element.classList.remove("error", "success");
+
+      if(type){
+        element.classList.add(type);
+      }
+    }
 
     function getParams(){
       return new URLSearchParams(window.location.search);
     }
 
-    function getHashParams(){
-      const hash = window.location.hash || "";
-      const clean = hash.startsWith("#") ? hash.slice(1) : hash;
-      return new URLSearchParams(clean);
-    }
-
-    function setStatus(message, type){
-      statusEl.textContent = message || "";
-      statusEl.classList.remove("error", "success");
-
-      if(type === "error"){
-        statusEl.classList.add("error");
-      }
-
-      if(type === "success"){
-        statusEl.classList.add("success");
-      }
-    }
-
-    function showToast(message){
-      toast.textContent = message || "Pronto.";
-      toast.classList.add("show");
-
-      window.setTimeout(() => {
-        toast.classList.remove("show");
-      }, 2200);
-    }
-
-    function normalizeAppKey(app){
-      return String(app || "developer")
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9_-]/g, "");
-    }
-
     function normalizeAppName(app){
-      const key = normalizeAppKey(app);
-      return appNames[key] || app || "Serviço Lukintosh";
+      return appNames[app] || app || "Serviço Lukintosh";
     }
 
-    function safeUrl(value){
+    function getAppFromRedirectUrl(url){
       try{
-        return new URL(value);
+        const u = new URL(url);
+
+        if(u.hostname === "developer.lukintosh.com") return "developer";
+        if(u.hostname === "support.lukintosh.com") return "support";
+        if(u.hostname === "store.lukintosh.com") return "store";
+        if(u.hostname === "cloud.lukintosh.com") return "cloud";
+        if(u.hostname === "lukintosh.com" || u.hostname === "www.lukintosh.com") return "lukintosh";
+
+        return "accounts";
       }catch(e){
-        return null;
+        return "accounts";
       }
     }
 
     function isAllowedRedirect(url){
-      const parsed = safeUrl(url);
+      try{
+        const parsed = new URL(url);
 
-      if(!parsed){
+        if(parsed.protocol !== "https:"){
+          return false;
+        }
+
+        return allowedRedirectHosts.includes(parsed.hostname);
+      }catch(e){
         return false;
       }
-
-      if(parsed.protocol !== "https:"){
-        return false;
-      }
-
-      return allowedRedirectHosts.includes(parsed.hostname);
     }
 
-    function getAppFromRedirectUrl(url){
-      const parsed = safeUrl(url);
-
-      if(!parsed){
-        return "developer";
-      }
-
-      return appHostMap[parsed.hostname] || "lukintosh";
-    }
-
-    function getExplicitRedirectParam(){
+    function getRedirectFromParamsOrReferrer(){
       const params = getParams();
 
-      return (
+      const redirectParam =
         params.get("redirect") ||
         params.get("redirect_uri") ||
         params.get("return_to") ||
-        params.get("next") ||
-        params.get("continue") ||
-        ""
-      );
-    }
+        params.get("next");
 
-    function getRedirectFromReferrer(){
-      if(!document.referrer){
-        return "";
+      if(redirectParam && isAllowedRedirect(redirectParam)){
+        return redirectParam;
       }
 
-      const refUrl = safeUrl(document.referrer);
+      if(document.referrer){
+        try{
+          const refUrl = new URL(document.referrer);
 
-      if(!refUrl){
-        return "";
-      }
-
-      if(refUrl.protocol !== "https:"){
-        return "";
-      }
-
-      if(!allowedRedirectHosts.includes(refUrl.hostname)){
-        return "";
-      }
-
-      return refUrl.href;
-    }
-
-    function getAppFromParams(){
-      const params = getParams();
-      const hashParams = getHashParams();
-
-      const app =
-        params.get("app") ||
-        params.get("client_id") ||
-        params.get("service") ||
-        hashParams.get("app") ||
-        hashParams.get("client_id") ||
-        "";
-
-      if(app){
-        return normalizeAppKey(app);
+          if(allowedRedirectHosts.includes(refUrl.hostname)){
+            return refUrl.href;
+          }
+        }catch(e){}
       }
 
       return "";
     }
 
-    function getRedirectUrl(){
-      const explicit = getExplicitRedirectParam();
+    function getCurrentApp(){
+      const params = getParams();
+      const appParam = params.get("app") || params.get("client_id");
 
-      if(explicit && isAllowedRedirect(explicit)){
-        return explicit;
+      if(appParam){
+        return appParam.toLowerCase();
       }
 
-      const fromReferrer = getRedirectFromReferrer();
+      const redirectUrl = getRedirectFromParamsOrReferrer();
 
-      if(fromReferrer && isAllowedRedirect(fromReferrer)){
-        return fromReferrer;
+      if(redirectUrl){
+        return getAppFromRedirectUrl(redirectUrl);
       }
 
-      const app = getAppFromParams() || "developer";
-      const fallback = defaultRedirects[app] || defaultRedirects.developer;
-
-      return fallback;
+      return "accounts";
     }
 
-    function getApp(){
-      const explicitApp = getAppFromParams();
+  function shouldShowConsent(){
+  const params = getParams();
 
-      if(explicitApp){
-        return explicitApp;
-      }
+  if(params.get("app") || params.get("client_id")){
+    return true;
+  }
 
-      const redirect = getRedirectUrl();
+  const redirectUrl = getRedirectFromParamsOrReferrer();
 
-      if(redirect){
-        return getAppFromRedirectUrl(redirect);
-      }
+  if(!redirectUrl){
+    return false;
+  }
 
-      return "developer";
-    }
+  try{
+    const redirectHost = new URL(redirectUrl).hostname;
+    const currentHost = window.location.hostname;
+
+    return redirectHost !== currentHost;
+  }catch(e){
+    return false;
+  }
+}
 
     function appendAuthResult(url, result, app){
       const parsed = new URL(url);
-
       parsed.searchParams.set("lukintosh_sso", result);
       parsed.searchParams.set("app", app);
-      parsed.searchParams.set("source", "lukintosh_account");
 
       if(result === "success"){
         parsed.searchParams.set("authorized", "1");
-        parsed.searchParams.set("permission", "granted");
-      }
-
-      if(result === "denied"){
-        parsed.searchParams.set("authorized", "0");
-        parsed.searchParams.set("permission", "denied");
       }
 
       return parsed.toString();
     }
 
-    function buildPermissionRecord(app, redirectUrl, result){
-      return {
-        app,
-        result,
-        redirectUrl,
-        createdAt: new Date().toISOString(),
-        origin: window.location.origin,
-        page: window.location.href,
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown"
-      };
-    }
-
-    function savePermission(app, redirectUrl, result){
-      const key = `lukintosh_authorized_${app}`;
-      const detailKey = `lukintosh_authorized_${app}_details`;
-      const record = buildPermissionRecord(app, redirectUrl, result);
-
-      localStorage.setItem(key, result === "success" ? "true" : "false");
-      localStorage.setItem(`${key}_at`, record.createdAt);
-      localStorage.setItem(detailKey, JSON.stringify(record));
-
-      return record;
-    }
-
-    function getHostLabel(url){
-      const parsed = safeUrl(url);
-
-      if(!parsed){
-        return "Destino desconhecido";
-      }
-
-      return parsed.hostname;
-    }
-
-    function getPrettyRedirect(url){
-      const parsed = safeUrl(url);
-
-      if(!parsed){
-        return "developer.lukintosh.com";
-      }
-
-      let path = parsed.pathname || "/";
-
-      if(path.length > 24){
-        path = path.slice(0, 24) + "…";
-      }
-
-      return parsed.hostname + path;
-    }
-
-    function getProfileName(){
-      const params = getParams();
-
+    function getDisplayName(user){
       return (
-        params.get("name") ||
-        localStorage.getItem("lukintosh_profile_name") ||
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.email?.split("@")[0] ||
         "Lukintosh User"
       );
     }
 
-    function getProfileEmail(){
-      const params = getParams();
+    function fillUser(user){
+      const name = getDisplayName(user);
+      const email = user?.email || "user@lukintosh.com";
 
-      return (
-        params.get("email") ||
-        localStorage.getItem("lukintosh_profile_email") ||
-        "Signed in with Lukintosh"
-      );
+      profileName.textContent = name;
+      profileEmail.textContent = email;
+
+      dashName.textContent = name;
+      dashEmail.textContent = email;
     }
 
-    function setProfile(){
-      profileName.textContent = getProfileName();
-      profileEmail.textContent = getProfileEmail();
-    }
-
-    function updateDebug(){
-      const app = getApp();
-      const redirectUrl = getRedirectUrl();
-
-      const payload = {
-        app,
-        appName: normalizeAppName(app),
-        redirectUrl,
-        redirectHost: getHostLabel(redirectUrl),
-        allowed: isAllowedRedirect(redirectUrl),
-        referrer: document.referrer || null,
-        query: Object.fromEntries(getParams().entries()),
-        time: new Date().toISOString()
-      };
-
-      debugOutput.textContent = JSON.stringify(payload, null, 2);
-    }
-
-    function render(){
-      const app = getApp();
+    function renderConsent(user){
+      const app = getCurrentApp();
       const appName = normalizeAppName(app);
-      const redirectUrl = getRedirectUrl();
-      const redirectLabel = getPrettyRedirect(redirectUrl);
 
-      document.title = `${appName} — Lukintosh Account`;
+      fillUser(user);
 
       appPillText.textContent = appName;
-      topAppPill.textContent = appName;
-
       consentTitle.textContent = `${appName} quer acessar sua conta`;
+      consentDesc.textContent = `Permita que ${appName} use sua Lukintosh Account para continuar sem precisar fazer login novamente.`;
 
-      consentDesc.textContent =
-        `Permita que ${appName} use sua Lukintosh Account para continuar sem repetir a etapa de entrada.`;
-
-      miniApp.textContent = app;
-      miniRedirect.textContent = redirectLabel;
-
-      setProfile();
-      updateDebug();
-
-      if(!isAllowedRedirect(redirectUrl)){
-        setStatus("Destino não permitido. A permissão foi bloqueada.", "error");
-        allowBtn.disabled = true;
-        allowBtn.style.opacity = ".5";
-        allowBtn.style.cursor = "not-allowed";
-      }
+      showView("consent");
     }
 
-    function goToDestination(result){
-      const app = getApp();
-      const redirectUrl = getRedirectUrl();
+    function renderDashboard(user){
+      fillUser(user);
+      showView("dashboard");
+    }
 
-      if(!redirectUrl || !isAllowedRedirect(redirectUrl)){
-        setStatus("Redirect não permitido.", "error");
+    async function handleSession(){
+      showView("loading");
+
+      const { data, error } = await supabaseClient.auth.getSession();
+
+      if(error){
+        console.error(error);
+        showView("login");
+        setStatus(loginStatus, "Não foi possível verificar sua sessão.", "error");
         return;
       }
 
-      const record = savePermission(app, redirectUrl, result);
+      const session = data.session;
 
-      updateDebug();
-
-      if(result === "success"){
-        setStatus("Permissão concedida. Redirecionando...", "success");
-        showToast("Permissão concedida.");
-      }else{
-        setStatus("Permissão cancelada. Redirecionando...", "error");
-        showToast("Permissão cancelada.");
+      if(!session){
+        showView("login");
+        return;
       }
 
-      const destination = appendAuthResult(redirectUrl, result, app);
+      const user = session.user;
 
-      window.setTimeout(() => {
-        window.location.href = destination;
-      }, 450);
-
-      return record;
+      if(shouldShowConsent()){
+        renderConsent(user);
+      }else{
+        renderDashboard(user);
+      }
     }
 
-    allowBtn.addEventListener("click", () => {
-      goToDestination("success");
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if(!email || !password){
+        setStatus(loginStatus, "Digite seu e-mail e senha.", "error");
+        return;
+      }
+
+      loginSubmit.disabled = true;
+      loginSubmit.textContent = "Entrando...";
+      setStatus(loginStatus, "");
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = "Entrar";
+
+      if(error){
+        setStatus(loginStatus, error.message || "Falha ao entrar.", "error");
+        return;
+      }
+
+      const user = data.user;
+
+      if(shouldShowConsent()){
+        renderConsent(user);
+      }else{
+        renderDashboard(user);
+      }
+    });
+
+    googleBtn.addEventListener("click", async () => {
+      const redirectBackToMyAccount = window.location.href;
+
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectBackToMyAccount
+        }
+      });
+
+      if(error){
+        setStatus(loginStatus, error.message || "Falha ao abrir login com Google.", "error");
+      }
+    });
+
+    allowBtn.addEventListener("click", async () => {
+      const redirectUrl = getRedirectFromParamsOrReferrer();
+      const app = getCurrentApp();
+
+      if(!redirectUrl || !isAllowedRedirect(redirectUrl)){
+        setStatus(consentStatus, "Redirect não permitido.", "error");
+        return;
+      }
+
+      localStorage.setItem(`lukintosh_authorized_${app}`, "true");
+      localStorage.setItem(`lukintosh_authorized_${app}_at`, new Date().toISOString());
+
+      const destination = appendAuthResult(redirectUrl, "success", app);
+      window.location.href = destination;
     });
 
     denyBtn.addEventListener("click", () => {
-      goToDestination("denied");
-    });
+      const redirectUrl = getRedirectFromParamsOrReferrer();
 
-    window.addEventListener("keydown", (event) => {
-      if(event.key === "Escape"){
-        goToDestination("denied");
-      }
-
-      if(event.key === "Enter"){
-        goToDestination("success");
-      }
-
-      if(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "d"){
-        debugPanel.classList.toggle("show");
-        updateDebug();
+      if(redirectUrl && isAllowedRedirect(redirectUrl)){
+        const app = getCurrentApp();
+        window.location.href = appendAuthResult(redirectUrl, "denied", app);
+      }else{
+        showView("dashboard");
       }
     });
 
-    window.addEventListener("storage", () => {
-      setProfile();
-      updateDebug();
+    logoutBtn.addEventListener("click", async () => {
+      setStatus(dashboardStatus, "Saindo...");
+
+      const { error } = await supabaseClient.auth.signOut();
+
+      if(error){
+        setStatus(dashboardStatus, error.message || "Erro ao sair.", "error");
+        return;
+      }
+
+      showView("login");
+      setStatus(loginStatus, "Você saiu da conta.", "success");
     });
 
-    render();
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if(event === "SIGNED_IN" && session?.user){
+        if(shouldShowConsent()){
+          renderConsent(session.user);
+        }else{
+          renderDashboard(session.user);
+        }
+      }
+
+      if(event === "SIGNED_OUT"){
+        showView("login");
+      }
+    });
+
+    handleSession();
   </script>
 </body>
 </html>
