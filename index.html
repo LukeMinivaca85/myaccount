@@ -2006,10 +2006,7 @@
 
   authForm.addEventListener("submit", handleEmailAuth);
 
-  authSubmit.addEventListener("click", (event) => {
-    event.preventDefault();
-    handleEmailAuth(event);
-  });
+authForm.addEventListener("submit", handleEmailAuth);
 
   verifyEmailCodeButton.addEventListener("click", async () => {
     try {
