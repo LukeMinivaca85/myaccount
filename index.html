@@ -1,2204 +1,820 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Lukintosh Accounts</title>
-  <meta name="description" content="Lukintosh Accounts — secure sign-in, account access, sessions, devices and identity settings for Lukintosh services." />
-  <meta name="theme-color" content="#050507" />
+  <title>Lukintosh Account</title>
+
+  <meta name="description" content="Sign in to your Lukintosh Account." />
+  <meta name="robots" content="index, follow" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    :root {
-      --bg: #050507;
-      --text: #f5f5f7;
-      --muted: #a6a6ad;
-      --muted-2: #73737d;
-      --line: rgba(255, 255, 255, 0.12);
-      --line-strong: rgba(255, 255, 255, 0.2);
-      --green: #6ee7a8;
-      --red: #ff6b6b;
-      --yellow: #ffd166;
-      --blue: #8ab4ff;
-      --shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
-      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    *{
+      box-sizing:border-box;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    html, body{
+      margin:0;
+      min-height:100%;
+      background:#000;
+      color:#fff;
+      font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    html {
-      background: var(--bg);
-      scroll-behavior: smooth;
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      overflow-x:hidden;
     }
 
-    body {
-      min-height: 100vh;
-      font-family: var(--font);
-      color: var(--text);
+    body::before{
+      content:"";
+      position:fixed;
+      inset:-40%;
       background:
-        radial-gradient(circle at 18% -8%, rgba(138, 180, 255, 0.3), transparent 35%),
-        radial-gradient(circle at 90% 0%, rgba(180, 156, 255, 0.18), transparent 30%),
-        radial-gradient(circle at 50% 110%, rgba(110, 231, 168, 0.1), transparent 40%),
-        linear-gradient(180deg, #050507 0%, #09090d 45%, #040405 100%);
-      overflow-x: hidden;
+        radial-gradient(circle at 20% 20%, rgba(0,112,255,.28), transparent 32%),
+        radial-gradient(circle at 80% 10%, rgba(130,80,255,.22), transparent 30%),
+        radial-gradient(circle at 50% 100%, rgba(255,255,255,.12), transparent 28%);
+      filter:blur(20px);
+      z-index:-2;
     }
 
-    button,
-    input,
-    select,
-    textarea {
-      font: inherit;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .loading-screen,
-    .auth-screen {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-    }
-
-    .loading-card,
-    .auth-card {
-      width: min(460px, 100%);
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 30px;
-      padding: 30px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-    }
-
-    .loading-card {
-      text-align: center;
-    }
-
-    .spinner {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      border: 3px solid rgba(255,255,255,.16);
-      border-top-color: #fff;
-      margin: 0 auto 18px;
-      animation: spin .8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 28px;
-    }
-
-    .mark {
-      width: 42px;
-      height: 42px;
-      border-radius: 15px;
+    body::after{
+      content:"";
+      position:fixed;
+      inset:0;
       background:
-        linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.24)),
-        radial-gradient(circle at 22% 18%, #fff, #8ab4ff 44%, #15151a 100%);
-      box-shadow: 0 0 38px rgba(138,180,255,.30);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .mark::after {
-      content: "";
-      position: absolute;
-      inset: 7px;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,.14);
-    }
-
-    .brand strong {
-      display: block;
-      font-size: 15px;
-      letter-spacing: -0.03em;
-    }
-
-    .brand span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    h1 {
-      font-size: 40px;
-      line-height: 0.95;
-      letter-spacing: -0.07em;
-      margin-bottom: 12px;
-    }
-
-    .auth-card p,
-    .loading-card p {
-      color: var(--muted);
-      line-height: 1.5;
-      margin-bottom: 22px;
-    }
-
-    .tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,.2);
-      border-radius: 999px;
-      padding: 5px;
-      margin-bottom: 18px;
-    }
-
-    .tab {
-      border: 0;
-      border-radius: 999px;
-      min-height: 40px;
-      background: transparent;
-      color: var(--muted);
-      font-weight: 800;
-    }
-
-    .tab.active {
-      background: #f5f5f7;
-      color: #050507;
-    }
-
-    form,
-    .email-code-box {
-      display: grid;
-      gap: 12px;
-    }
-
-    label {
-      display: grid;
-      gap: 8px;
-      color: rgba(245,245,247,.72);
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    input {
-      width: 100%;
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,.25);
-      color: var(--text);
-      border-radius: 16px;
-      padding: 14px;
-      outline: none;
-      min-height: 50px;
-    }
-
-    input:focus {
-      border-color: rgba(255,255,255,.34);
-      box-shadow: 0 0 0 4px rgba(255,255,255,.06);
-    }
-
-    .password-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .password-wrap input {
-      padding-right: 105px;
-    }
-
-    .show-password {
-      position: absolute;
-      right: 8px;
-      height: 36px;
-      padding: 0 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 999px;
-      background: rgba(255,255,255,.08);
-      color: #f5f5f7;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .btn {
-      border: 1px solid var(--line);
-      min-height: 46px;
-      border-radius: 999px;
-      padding: 0 18px;
-      background: rgba(255,255,255,.07);
-      color: var(--text);
-      font-weight: 800;
-      transition: transform .2s ease, background .2s ease, border-color .2s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      background: rgba(255,255,255,.11);
-      border-color: var(--line-strong);
-    }
-
-    .btn.primary {
-      background: #f5f5f7;
-      color: #050507;
-      border-color: #f5f5f7;
-    }
-
-    .btn.red {
-      background: rgba(255, 107, 107, .1);
-      color: #ffb4b4;
-      border-color: rgba(255, 107, 107, .24);
-    }
-
-    .btn:disabled {
-      cursor: not-allowed;
-      opacity: .5;
-      transform: none;
-    }
-
-    .form-actions {
-      display: grid;
-      gap: 10px;
-      margin-top: 6px;
-    }
-
-    .oauth-divider {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      gap: 12px;
-      margin: 22px 0 14px;
-    }
-
-    .oauth-divider span {
-      height: 1px;
-      background: rgba(255,255,255,.12);
-    }
-
-    .oauth-divider p {
-      color: #a6a6ad;
-      font-size: 12px;
-      margin: 0;
-      white-space: nowrap;
-    }
-
-    .oauth-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .oauth-btn {
-      min-height: 48px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 999px;
-      background: rgba(255,255,255,.07);
-      color: #f5f5f7;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 9px;
-      font-weight: 800;
-      font-size: 13px;
-      transition: transform .2s ease, background .2s ease, border-color .2s ease;
-    }
-
-    .oauth-btn:hover {
-      transform: translateY(-1px);
-      background: rgba(255,255,255,.12);
-      border-color: rgba(255,255,255,.22);
-    }
-
-    .oauth-btn.apple {
-      background: #000;
-      color: #fff;
-      border-color: rgba(255,255,255,.18);
-    }
-
-    .oauth-icon {
-      width: 18px;
-      height: 18px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 auto;
-    }
-
-    .oauth-icon svg {
-      width: 18px;
-      height: 18px;
-      display: block;
-    }
-
-    .email-code-box {
-      margin-top: 18px;
-    }
-
-    .email-code-box h2 {
-      font-size: 30px;
-      line-height: 1;
-      letter-spacing: -0.06em;
-    }
-
-    .email-code-box p {
-      color: var(--muted);
-      line-height: 1.5;
-      margin: 0;
-    }
-
-    #emailCodeInput {
-      text-align: center;
-      font-size: 28px;
-      letter-spacing: 0.22em;
-      font-weight: 900;
-    }
-
-    .legal-links {
-      margin-top: 18px;
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      color: #a6a6ad;
-      font-size: 12px;
-    }
-
-    .legal-links a {
-      color: #f5f5f7;
-    }
-
-    .legal-links a:hover {
-      text-decoration: underline;
-    }
-
-    .app {
-      width: min(1280px, calc(100% - 28px));
-      margin: 0 auto;
-      padding: 18px 0 34px;
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 18px;
-    }
-
-    .sidebar,
-    .topbar,
-    .panel {
-      border: 1px solid var(--line);
-      background: rgba(10, 10, 14, 0.64);
-      backdrop-filter: blur(28px) saturate(150%);
-      -webkit-backdrop-filter: blur(28px) saturate(150%);
-      box-shadow: var(--shadow);
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 18px;
-      height: calc(100vh - 36px);
-      border-radius: 30px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .nav-label {
-      color: var(--muted-2);
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      font-size: 10px;
-      font-weight: 900;
-      margin: 8px 8px 9px;
-    }
-
-    .nav {
-      display: grid;
-      gap: 6px;
-    }
-
-    .nav a {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px;
-      border-radius: 16px;
-      color: rgba(245,245,247,.72);
-      font-size: 14px;
-      transition: background .2s ease, color .2s ease;
-    }
-
-    .nav a:hover,
-    .nav a.active {
-      background: rgba(255,255,255,.085);
-      color: var(--text);
-    }
-
-    .nav-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 11px;
-      display: grid;
-      place-items: center;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.06);
-      flex: 0 0 auto;
-    }
-
-    .mini-profile {
-      margin-top: auto;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 20px;
-      background: rgba(255,255,255,.05);
-      border: 1px solid var(--line);
-    }
-
-    .avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(145deg, #fff, #8ab4ff 46%, #b49cff 100%);
-      color: #050507;
-      font-weight: 900;
-      flex: 0 0 auto;
-      overflow: hidden;
-    }
-
-    .avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .mini-profile strong,
-    .id-user strong {
-      display: block;
-      font-size: 14px;
-      letter-spacing: -0.02em;
-    }
-
-    .mini-profile span,
-    .id-user span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 4px;
-      max-width: 170px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .main {
-      display: grid;
-      gap: 18px;
-      min-width: 0;
-    }
-
-    .topbar {
-      position: sticky;
-      top: 18px;
-      z-index: 10;
-      min-height: 76px;
-      border-radius: 30px;
-      padding: 16px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-    }
-
-    .page-title h2 {
-      font-size: 30px;
-      letter-spacing: -0.06em;
-      line-height: 1;
-    }
-
-    .page-title p {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 7px;
-    }
-
-    .top-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 32px;
-      background:
-        radial-gradient(circle at 82% 0%, rgba(138,180,255,.30), transparent 36%),
-        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035));
-      box-shadow: var(--shadow);
-      padding: clamp(24px, 4vw, 42px);
-    }
-
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 24px;
-      align-items: center;
-    }
-
-    .eyebrow {
-      width: max-content;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      color: rgba(245,245,247,.78);
-      background: rgba(255,255,255,.065);
-      border: 1px solid var(--line);
-      font-size: 12px;
-      margin-bottom: 20px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 18px rgba(110,231,168,.75);
-    }
-
-    .dot.yellow {
-      background: var(--yellow);
-      box-shadow: 0 0 18px rgba(255,209,102,.65);
-    }
-
-    .hero h1 {
-      max-width: 760px;
-      font-size: clamp(42px, 6vw, 74px);
-    }
-
-    .hero p {
-      max-width: 680px;
-      color: rgba(245,245,247,.68);
-      margin-top: 20px;
-      font-size: 17px;
-      line-height: 1.6;
-    }
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size:48px 48px;
+      mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent);
+      z-index:-1;
+    }
+
+    .shell{
+      width:100%;
+      max-width:460px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:18px;
+      justify-content:center;
+    }
 
-    .hero-actions {
-      margin-top: 28px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+    .brand-mark{
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      background:linear-gradient(135deg, #fff, #8f8f8f);
+      box-shadow:0 0 40px rgba(255,255,255,.28);
     }
 
-    .identity-card {
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,.22);
-      border-radius: 28px;
-      padding: 20px;
+    .brand-text{
+      font-size:15px;
+      font-weight:800;
+      letter-spacing:.16em;
+      text-transform:uppercase;
     }
 
-    .id-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 22px;
+    .card{
+      width:100%;
+      background:rgba(15,15,18,.82);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:28px;
+      padding:30px;
+      box-shadow:0 30px 90px rgba(0,0,0,.55);
+      backdrop-filter:blur(22px);
     }
 
-    .id-user {
-      display: flex;
-      gap: 14px;
-      align-items: center;
+    .kicker{
+      color:#8a8a8a;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      margin-bottom:12px;
     }
 
-    .avatar.big {
-      width: 62px;
-      height: 62px;
-      border-radius: 22px;
-      font-size: 23px;
+    h1{
+      margin:0 0 10px;
+      font-size:30px;
+      line-height:1.05;
+      letter-spacing:-.04em;
     }
 
-    .verified,
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      background: rgba(110,231,168,.10);
-      color: #adffd0;
-      border: 1px solid rgba(110,231,168,.22);
-      font-size: 12px;
-      font-weight: 800;
-      white-space: nowrap;
+    .desc{
+      margin:0 0 24px;
+      color:rgba(255,255,255,.68);
+      font-size:15px;
+      line-height:1.55;
     }
 
-    .tag.yellow,
-    .verified.yellow {
-      color: #ffe3a2;
-      border-color: rgba(255,209,102,.24);
-      background: rgba(255,209,102,.10);
+    label{
+      display:block;
+      font-size:13px;
+      color:rgba(255,255,255,.72);
+      margin-bottom:8px;
+      font-weight:600;
     }
 
-    .tag.red {
-      color: #ffb4b4;
-      border-color: rgba(255,107,107,.24);
-      background: rgba(255,107,107,.10);
+    input{
+      width:100%;
+      height:48px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      padding:0 14px;
+      outline:none;
+      font-size:15px;
+      margin-bottom:14px;
     }
 
-    .id-metrics {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+    input:focus{
+      border-color:rgba(255,255,255,.38);
+      background:rgba(255,255,255,.09);
     }
 
-    .metric {
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,.045);
-      border-radius: 18px;
-      padding: 13px;
+    button, .button{
+      width:100%;
+      height:48px;
+      border:0;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:700;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      transition:.2s ease;
     }
 
-    .metric b {
-      display: block;
-      font-size: 22px;
-      letter-spacing: -0.06em;
-      margin-bottom: 4px;
+    .primary{
+      background:#fff;
+      color:#000;
     }
 
-    .metric span {
-      color: var(--muted);
-      font-size: 12px;
+    .primary:hover{
+      transform:translateY(-1px);
+      box-shadow:0 12px 40px rgba(255,255,255,.14);
     }
 
-    .panel {
-      border-radius: 30px;
-      overflow: hidden;
+    .secondary{
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.14);
     }
 
-    .panel-head {
-      padding: 24px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 18px;
+    .secondary:hover{
+      background:rgba(255,255,255,.12);
     }
 
-    .panel-head h2 {
-      font-size: 36px;
-      letter-spacing: -0.06em;
-      line-height: 1;
+    .row{
+      display:flex;
+      gap:10px;
     }
 
-    .panel-head p {
-      color: var(--muted);
-      margin-top: 9px;
-      max-width: 620px;
-      line-height: 1.52;
-      font-size: 14px;
+    .row button{
+      flex:1;
     }
 
-    .panel-body {
-      padding: 24px;
+    .divider{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin:20px 0;
+      color:rgba(255,255,255,.36);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      font-weight:700;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
+    .divider::before,
+    .divider::after{
+      content:"";
+      height:1px;
+      flex:1;
+      background:rgba(255,255,255,.12);
     }
 
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: rgba(0,0,0,.18);
-      padding: 18px;
-      min-height: 166px;
+    .status{
+      margin-top:16px;
+      min-height:20px;
+      font-size:13px;
+      color:rgba(255,255,255,.66);
+      line-height:1.4;
     }
 
-    .card-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 15px;
-      display: grid;
-      place-items: center;
-      background: rgba(255,255,255,.07);
-      border: 1px solid var(--line);
-      margin-bottom: 22px;
+    .status.error{
+      color:#ff8a8a;
     }
 
-    .card h3 {
-      font-size: 18px;
-      letter-spacing: -0.035em;
-      margin-bottom: 9px;
+    .status.success{
+      color:#b7ffce;
     }
 
-    .card p {
-      color: var(--muted);
-      line-height: 1.52;
-      font-size: 14px;
+    .permissions{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      padding:14px;
+      margin:20px 0 22px;
     }
 
-    .settings {
-      display: grid;
-      gap: 12px;
+    .permission{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:8px 0;
+      color:rgba(255,255,255,.78);
+      font-size:14px;
+      line-height:1.4;
     }
 
-    .setting-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 18px;
-      align-items: center;
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,.16);
-      border-radius: 20px;
-      padding: 16px;
+    .check{
+      color:#fff;
+      opacity:.85;
+      width:18px;
+      flex:none;
     }
 
-    .setting-row h3 {
-      font-size: 15px;
-      letter-spacing: -0.025em;
-      margin-bottom: 5px;
+    .app-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:13px;
+      color:rgba(255,255,255,.82);
+      margin-bottom:16px;
     }
 
-    .setting-row p {
-      color: var(--muted);
-      line-height: 1.5;
-      font-size: 13px;
+    .dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#78ff9f;
+      box-shadow:0 0 20px rgba(120,255,159,.55);
     }
 
-    .mfa-qr-box {
-      margin-top: 12px;
-      width: 224px;
-      min-height: 224px;
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 12px;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
+    .hidden{
+      display:none !important;
     }
 
-    .mfa-qr-box img,
-    .mfa-qr-box canvas,
-    .mfa-qr-box svg {
-      display: block;
-      width: 200px !important;
-      height: 200px !important;
-      object-fit: contain;
+    .footer-note{
+      text-align:center;
+      margin-top:18px;
+      color:rgba(255,255,255,.42);
+      font-size:12px;
+      line-height:1.5;
     }
 
-    .mfa-qr-box p {
-      color: #050507;
-      font-size: 12px;
-      line-height: 1.4;
-      text-align: center;
+    .footer-note a{
+      color:rgba(255,255,255,.7);
+      text-decoration:none;
     }
 
-    .mfa-secret {
-      margin-top: 12px;
-      word-break: break-all;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      color: #f5f5f7 !important;
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--line);
-      padding: 10px;
-      border-radius: 14px;
+    .profile-line{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin:18px 0 22px;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
     }
 
-    .mfa-gate {
-      border: 1px solid rgba(255, 209, 102, .24);
-      background: rgba(255, 209, 102, .08);
-      border-radius: 22px;
-      padding: 18px;
-      display: grid;
-      gap: 12px;
+    .avatar{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background:linear-gradient(135deg, #fff, #6f6f6f);
+      flex:none;
     }
 
-    .toast {
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      z-index: 50;
-      max-width: 420px;
-      border: 1px solid var(--line);
-      background: rgba(13,13,18,.9);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      color: rgba(245,245,247,.9);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      padding: 15px 16px;
-      font-size: 14px;
-      line-height: 1.45;
-      transform: translateY(18px);
-      opacity: 0;
-      pointer-events: none;
-      transition: all .25s ease;
+    .profile-name{
+      font-weight:700;
+      font-size:14px;
     }
 
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
+    .profile-email{
+      color:rgba(255,255,255,.55);
+      font-size:13px;
+      margin-top:2px;
+      word-break:break-all;
     }
 
-    @media (max-width: 980px) {
-      .app {
-        grid-template-columns: 1fr;
+    @media(max-width:520px){
+      .card{
+        padding:24px;
+        border-radius:24px;
       }
 
-      .sidebar {
-        position: relative;
-        top: 0;
-        height: auto;
+      h1{
+        font-size:27px;
       }
 
-      .hero-grid,
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .app {
-        width: min(100% - 18px, 1280px);
-        padding-top: 9px;
-      }
-
-      .topbar {
-        position: relative;
-        top: 0;
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .top-actions,
-      .top-actions .btn {
-        width: 100%;
-      }
-
-      .hero h1 {
-        font-size: 42px;
-      }
-
-      .id-metrics,
-      .setting-row {
-        grid-template-columns: 1fr;
-      }
-
-      .panel-head {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .oauth-grid {
-        grid-template-columns: 1fr;
+      .row{
+        flex-direction:column;
       }
     }
   </style>
 </head>
 
 <body>
-  <div id="loadingScreen" class="loading-screen">
-    <section class="loading-card">
-      <div class="spinner"></div>
-      <h1>Lukintosh Accounts</h1>
-      <p>Carregando identidade Lukintosh...</p>
+  <main class="shell">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">Lukintosh</div>
+    </div>
+
+    <section id="loadingView" class="card">
+      <div class="kicker">Lukintosh Account</div>
+      <h1>Carregando...</h1>
+      <p class="desc">Verificando sua sessão com segurança.</p>
+      <div class="status">Aguarde um instante.</div>
     </section>
-  </div>
 
-  <div id="authScreen" class="auth-screen hidden">
-    <section class="auth-card">
-      <div class="brand">
-        <div class="mark"></div>
-        <div>
-          <strong>Lukintosh Accounts</strong>
-          <span>Secure account access</span>
-        </div>
-      </div>
+    <section id="loginView" class="card hidden">
+      <div class="kicker">Lukintosh Account</div>
+      <h1>Entrar</h1>
+      <p class="desc" id="loginDesc">
+        Entre para continuar usando serviços da Lukintosh.
+      </p>
 
-      <h1 id="authTitle">Entrar</h1>
-      <p id="authDescription">Acesse sua conta Lukintosh para gerenciar segurança, sessões e configurações.</p>
+      <form id="loginForm">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" autocomplete="email" placeholder="you@lukintosh.com" required />
 
-      <div class="tabs">
-        <button class="tab active" id="loginTab" type="button">Login</button>
-        <button class="tab" id="signupTab" type="button">Criar conta</button>
-      </div>
+        <label for="password">Senha</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
 
-      <form id="authForm">
-        <label id="displayNameLabel" class="hidden">
-          Nome da conta
-          <input id="displayNameInput" type="text" placeholder="Lucas Account" autocomplete="name">
-        </label>
-
-        <label>
-          E-mail
-          <input id="emailInput" type="email" placeholder="voce@lukintosh.com" autocomplete="email" required>
-        </label>
-
-        <label>
-          Senha
-          <div class="password-wrap">
-            <input id="passwordInput" type="password" placeholder="Mínimo 8 caracteres" autocomplete="current-password" required>
-            <button class="show-password" type="button" data-toggle-password="passwordInput">Mostrar</button>
-          </div>
-        </label>
-
-        <div class="form-actions">
-          <button class="btn primary" id="authSubmit" type="submit">Entrar</button>
-        </div>
+        <button class="primary" type="submit" id="loginSubmit">
+          Entrar
+        </button>
       </form>
 
-      <section id="emailCodeBox" class="email-code-box hidden">
-        <h2>Verifique seu e-mail</h2>
-        <p id="emailCodeText">Enviamos um código de 6 dígitos para o seu e-mail.</p>
+      <div class="divider">ou</div>
 
-        <label>
-          Código de verificação
-          <input
-            id="emailCodeInput"
-            type="text"
-            inputmode="numeric"
-            maxlength="6"
-            autocomplete="one-time-code"
-            placeholder="000000"
-          >
-        </label>
+      <button class="secondary" type="button" id="googleBtn">
+        Continuar com Google
+      </button>
 
-        <div class="form-actions">
-          <button class="btn primary" id="verifyEmailCodeButton" type="button">Verificar código</button>
-          <button class="btn" id="backToLoginButton" type="button">Voltar</button>
-        </div>
-      </section>
-
-      <div class="oauth-divider">
-        <span></span>
-        <p>ou entre com</p>
-        <span></span>
-      </div>
-
-      <div class="oauth-grid">
-        <a class="oauth-btn apple" href="https://auth.lukintosh.com/auth/apple?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Apple">
-          <span class="oauth-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M16.365 1.43c0 1.14-.415 2.12-1.245 2.94-.895.885-1.91 1.395-3.045 1.32-.145-1.095.425-2.255 1.18-3.01.83-.84 2.26-1.47 3.11-1.25zM20.2 17.23c-.43.99-.64 1.43-1.2 2.31-.78 1.2-1.88 2.69-3.25 2.71-1.22.02-1.53-.79-3.18-.78-1.65.01-2 .81-3.22.79-1.37-.02-2.42-1.36-3.2-2.56-2.18-3.35-2.41-7.29-1.06-9.38.96-1.49 2.48-2.36 3.91-2.36 1.46 0 2.38.8 3.59.8 1.17 0 1.89-.8 3.58-.8 1.28 0 2.64.7 3.6 1.9-3.16 1.73-2.65 6.25.43 7.37z"/>
-            </svg>
-          </span>
-          Apple
-        </a>
-
-        <a class="oauth-btn" href="https://auth.lukintosh.com/auth/google?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Google">
-          <span class="oauth-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"/>
-            </svg>
-          </span>
-          Google
-        </a>
-
-        <a class="oauth-btn" href="https://auth.lukintosh.com/auth/microsoft?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com Microsoft">
-          <span class="oauth-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#F25022" d="M1 1h10v10H1z"/>
-              <path fill="#7FBA00" d="M13 1h10v10H13z"/>
-              <path fill="#00A4EF" d="M1 13h10v10H1z"/>
-              <path fill="#FFB900" d="M13 13h10v10H13z"/>
-            </svg>
-          </span>
-          Microsoft
-        </a>
-
-        <a class="oauth-btn" href="https://auth.lukintosh.com/auth/github?returnTo=https%3A%2F%2Flukintosh.com" aria-label="Continuar com GitHub">
-          <span class="oauth-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#f5f5f7" d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.16c-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.04 1.77 2.72 1.26 3.38.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18A10.97 10.97 0 0 1 12 6.02c.98 0 1.97.13 2.89.39 2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.42-2.69 5.39-5.25 5.67.42.36.79 1.08.79 2.18v3.15c0 .31.21.68.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
-            </svg>
-          </span>
-          GitHub
-        </a>
-      </div>
-
-      <div class="legal-links">
-        <a href="https://lukintosh.com/privacy">Privacy Policy</a>
-        <span>•</span>
-        <a href="https://lukintosh.com/terms">Terms of Service</a>
-        <span>•</span>
-        <a href="https://support.lukintosh.com">Support</a>
-      </div>
+      <div class="status" id="loginStatus"></div>
     </section>
-  </div>
 
-  <div id="appScreen" class="app hidden">
-    <aside class="sidebar">
-      <a href="https://lukintosh.com" class="brand">
-        <div class="mark"></div>
+    <section id="consentView" class="card hidden">
+      <div class="kicker">Lukintosh Account</div>
+
+      <div class="app-pill">
+        <span class="dot"></span>
+        <span id="appPillText">Serviço Lukintosh</span>
+      </div>
+
+      <h1 id="consentTitle">Permitir acesso?</h1>
+      <p class="desc" id="consentDesc">
+        Um serviço da Lukintosh quer usar sua conta para continuar.
+      </p>
+
+      <div class="profile-line">
+        <div class="avatar"></div>
         <div>
-          <strong>Lukintosh Accounts</strong>
-          <span>Secure account access</span>
-        </div>
-      </a>
-
-      <div class="nav-label">Account</div>
-      <nav class="nav">
-        <a class="active" href="#overview"><span class="nav-icon">⌂</span> Overview</a>
-        <a href="#profile"><span class="nav-icon">◐</span> Perfil</a>
-        <a href="#security"><span class="nav-icon">◆</span> Segurança</a>
-        <a href="#sessions"><span class="nav-icon">●</span> Sessões</a>
-        <a href="#privacy"><span class="nav-icon">◇</span> Privacidade</a>
-      </nav>
-
-      <div class="nav-label">System</div>
-      <nav class="nav">
-        <a href="https://support.lukintosh.com"><span class="nav-icon">?</span> Support</a>
-        <a href="https://lukintosh.com/trust"><span class="nav-icon">✓</span> Trust Center</a>
-      </nav>
-
-      <div class="mini-profile">
-        <div class="avatar" id="sidebarInitial">L</div>
-        <div>
-          <strong id="sidebarName">Carregando...</strong>
-          <span id="sidebarEmail">Carregando...</span>
+          <div class="profile-name" id="profileName">Lukintosh User</div>
+          <div class="profile-email" id="profileEmail">user@lukintosh.com</div>
         </div>
       </div>
-    </aside>
 
-    <main class="main">
-      <header class="topbar">
-        <div class="page-title">
-          <h2>Lukintosh Accounts</h2>
-          <p>Configurações, segurança e controle da sua identidade Lukintosh.</p>
+      <div class="permissions">
+        <div class="permission">
+          <span class="check">✓</span>
+          <span>Confirmar que você está logado.</span>
         </div>
-
-        <div class="top-actions">
-          <button class="btn" id="refreshButton" type="button">Atualizar</button>
-          <button class="btn red" id="logoutButton" type="button">Sair</button>
+        <div class="permission">
+          <span class="check">✓</span>
+          <span>Compartilhar seu nome e e-mail com este serviço Lukintosh.</span>
         </div>
-      </header>
-
-      <section class="mfa-gate hidden" id="mfaGate">
-        <h3>Verificação em duas etapas necessária</h3>
-        <p>Esta conta tem 2FA ativo. Digite o código do seu app Authenticator para liberar ações protegidas.</p>
-
-        <label>
-          Código do Authenticator
-          <input id="mfaLoginCodeInput" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos">
-        </label>
-
-        <button class="btn primary" id="verifyLoginMfaButton" type="button">Verificar 2FA</button>
-      </section>
-
-      <section class="hero" id="overview">
-        <div class="hero-grid">
-          <div>
-            <div class="eyebrow"><span class="dot" id="systemDot"></span> <span id="systemStatusText">Account systems operational</span></div>
-            <h1>Lukintosh Accounts</h1>
-            <p>Gerencie login, segurança, sessões, dispositivos e configurações da sua conta Lukintosh.</p>
-            <div class="hero-actions">
-              <a class="btn primary" href="#security">Revisar segurança</a>
-              <a class="btn" href="#sessions">Ver sessões</a>
-              <button class="btn" id="copyUserIdButton" type="button">Copiar User ID</button>
-            </div>
-          </div>
-
-          <aside class="identity-card">
-            <div class="id-top">
-              <div class="id-user">
-                <div class="avatar big" id="mainInitial">L</div>
-                <div>
-                  <strong id="accountName">Carregando...</strong>
-                  <span id="accountEmail">Carregando...</span>
-                </div>
-              </div>
-              <span class="verified" id="verifiedBadge">● Verified</span>
-            </div>
-
-            <div class="id-metrics">
-              <div class="metric">
-                <b id="securityScore">--</b>
-                <span>Security Score</span>
-              </div>
-              <div class="metric">
-                <b id="activeSessions">--</b>
-                <span>Active Sessions</span>
-              </div>
-              <div class="metric">
-                <b id="deviceCount">--</b>
-                <span>Devices</span>
-              </div>
-            </div>
-          </aside>
+        <div class="permission">
+          <span class="check">✓</span>
+          <span>Permitir continuar sem fazer login novamente agora.</span>
         </div>
-      </section>
+      </div>
 
-      <section class="panel" id="profile">
-        <div class="panel-head">
-          <div>
-            <h2>Perfil</h2>
-            <p>Atualize o nome exibido na sua conta.</p>
-          </div>
-          <span class="tag">Real API</span>
+      <div class="row">
+        <button class="secondary" type="button" id="denyBtn">
+          Cancelar
+        </button>
+
+        <button class="primary" type="button" id="allowBtn">
+          Permitir
+        </button>
+      </div>
+
+      <div class="status" id="consentStatus"></div>
+    </section>
+
+    <section id="dashboardView" class="card hidden">
+      <div class="kicker">Lukintosh Account</div>
+      <h1>Minha Conta</h1>
+      <p class="desc">
+        Você está conectado à sua Lukintosh Account.
+      </p>
+
+      <div class="profile-line">
+        <div class="avatar"></div>
+        <div>
+          <div class="profile-name" id="dashName">Lukintosh User</div>
+          <div class="profile-email" id="dashEmail">user@lukintosh.com</div>
         </div>
+      </div>
 
-        <div class="panel-body">
-          <form id="profileForm" class="settings">
-            <label>
-              Nome exibido
-              <input id="profileDisplayName" type="text" placeholder="Nome da conta" required>
-            </label>
+      <button class="secondary" type="button" id="logoutBtn">
+        Sair
+      </button>
 
-            <label>
-              E-mail
-              <input id="profileEmail" type="email" readonly>
-            </label>
+      <div class="status" id="dashboardStatus"></div>
+    </section>
 
-            <button class="btn primary protected-action" type="submit">Salvar perfil</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="panel" id="security">
-        <div class="panel-head">
-          <div>
-            <h2>Segurança</h2>
-            <p>Senha, 2FA real por Authenticator e proteção da sessão.</p>
-          </div>
-          <span class="tag yellow" id="twoFactorBadge">2FA: Loading</span>
-        </div>
-
-        <div class="panel-body">
-          <div class="grid">
-            <article class="card">
-              <div class="card-icon">◆</div>
-              <h3>Senha</h3>
-              <p>Atualize sua senha com segurança. A senha nunca aparece no front-end depois de enviada.</p>
-            </article>
-
-            <article class="card">
-              <div class="card-icon">◉</div>
-              <h3>2FA real</h3>
-              <p>Use Google Authenticator, Microsoft Authenticator, Authy ou 1Password com QR Code real.</p>
-            </article>
-
-            <article class="card">
-              <div class="card-icon">⌁</div>
-              <h3>Security alerts</h3>
-              <p>E-mails de novo login e códigos de 6 dígitos via Lukintosh Accounts.</p>
-            </article>
-          </div>
-
-          <div class="settings" style="margin-top: 14px;">
-            <div class="setting-row">
-              <div>
-                <h3>Two-Factor Authentication</h3>
-                <p id="mfaStatusText">Carregando status do 2FA...</p>
-              </div>
-
-              <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-                <button class="btn primary" id="enableMfaButton" type="button">Ativar 2FA</button>
-                <button class="btn red hidden protected-action" id="disableMfaButton" type="button">Desativar 2FA</button>
-              </div>
-            </div>
-
-            <div class="setting-row hidden" id="mfaSetupBox">
-              <div>
-                <h3>Escaneie o QR Code</h3>
-                <p>Use um app Authenticator. Depois digite o código de 6 dígitos para ativar.</p>
-
-                <div id="mfaQrBox" class="mfa-qr-box">
-                  <p>Aguardando QR Code...</p>
-                </div>
-
-                <p id="mfaSecretText" class="mfa-secret hidden"></p>
-
-                <input
-                  id="mfaCodeInput"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="6"
-                  placeholder="Código de 6 dígitos"
-                  style="margin-top:12px;"
-                >
-              </div>
-
-              <button class="btn primary" id="verifyMfaButton" type="button">Verificar e ativar</button>
-            </div>
-          </div>
-
-          <form id="passwordForm" class="settings" style="margin-top: 14px;">
-            <label>
-              Nova senha
-              <div class="password-wrap">
-                <input id="newPasswordInput" type="password" placeholder="Mínimo 8 caracteres" required>
-                <button class="show-password" type="button" data-toggle-password="newPasswordInput">Mostrar</button>
-              </div>
-            </label>
-
-            <button class="btn primary protected-action" type="submit">Alterar senha</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="panel" id="sessions">
-        <div class="panel-head">
-          <div>
-            <h2>Sessões</h2>
-            <p>Sessões internas registradas pelo backend.</p>
-          </div>
-          <button class="btn red protected-action" id="revokeOtherSessionsButton" type="button">Revogar outras sessões</button>
-        </div>
-
-        <div class="panel-body">
-          <div class="settings" id="sessionsList">
-            <div class="setting-row">
-              <div>
-                <h3>Carregando sessão...</h3>
-                <p>Aguardando backend.</p>
-              </div>
-              <span class="tag">Loading</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel" id="privacy">
-        <div class="panel-head">
-          <div>
-            <h2>Privacidade</h2>
-            <p>Área inicial para dados, auditoria e exportação.</p>
-          </div>
-          <span class="tag">Real account</span>
-        </div>
-
-        <div class="panel-body">
-          <div class="settings">
-            <div class="setting-row">
-              <div>
-                <h3>Exportar meus dados</h3>
-                <p>Próxima fase: gerar pacote JSON com dados da conta, logs e sessões.</p>
-              </div>
-              <button class="btn" type="button" data-toast="Exportação planejada para a próxima fase.">Solicitar</button>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <h3>Diagnóstico e segurança</h3>
-                <p>Coleta mínima para proteger login, sessão, dispositivos e auditoria.</p>
-              </div>
-              <span class="tag">Enabled</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="footer-note">
+      © 2026 Lukintosh Corporation. Secure sign-in for Lukintosh services.
+    </div>
+  </main>
 
   <script>
-  const API_BASE = "https://auth.lukintosh.com";
+    const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
+    const SUPABASE_ANON_KEY = "SUA_SUPABASE_ANON_KEY";
 
-  if (window.location.hash.includes("access_token")) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-    alert("O login voltou em modo token. Ajuste o backend para PKCE e tente novamente.");
-  }
-
-  const state = {
-    mode: "login",
-    user: null,
-    account: null,
-    sessions: [],
-    mfa: null,
-    currentMfaFactorId: null,
-    currentVerifiedMfaFactorId: null,
-    pendingEmailChallenge: null,
-    pendingEmailForCode: null
-  };
-
-  const loadingScreen = document.querySelector("#loadingScreen");
-  const authScreen = document.querySelector("#authScreen");
-  const appScreen = document.querySelector("#appScreen");
-  const toast = document.querySelector("#toast");
-
-  const loginTab = document.querySelector("#loginTab");
-  const signupTab = document.querySelector("#signupTab");
-  const authTitle = document.querySelector("#authTitle");
-  const authDescription = document.querySelector("#authDescription");
-  const authSubmit = document.querySelector("#authSubmit");
-  const authForm = document.querySelector("#authForm");
-  const displayNameLabel = document.querySelector("#displayNameLabel");
-  const displayNameInput = document.querySelector("#displayNameInput");
-  const emailInput = document.querySelector("#emailInput");
-  const passwordInput = document.querySelector("#passwordInput");
-
-  const emailCodeBox = document.querySelector("#emailCodeBox");
-  const emailCodeText = document.querySelector("#emailCodeText");
-  const emailCodeInput = document.querySelector("#emailCodeInput");
-  const verifyEmailCodeButton = document.querySelector("#verifyEmailCodeButton");
-  const backToLoginButton = document.querySelector("#backToLoginButton");
-
-  const logoutButton = document.querySelector("#logoutButton");
-  const refreshButton = document.querySelector("#refreshButton");
-  const copyUserIdButton = document.querySelector("#copyUserIdButton");
-  const profileForm = document.querySelector("#profileForm");
-  const passwordForm = document.querySelector("#passwordForm");
-
-  function getStoredAccessToken() {
-    return localStorage.getItem("lk_access_token") || "";
-  }
-
-  function storeSession(session) {
-    if (!session?.accessToken) return;
-
-    localStorage.setItem("lk_access_token", session.accessToken);
-
-    if (session.refreshToken) {
-      localStorage.setItem("lk_refresh_token", session.refreshToken);
-    }
-
-    if (session.expiresAt) {
-      localStorage.setItem("lk_expires_at", String(session.expiresAt));
-    }
-  }
-
-  function clearStoredSession() {
-    localStorage.removeItem("lk_access_token");
-    localStorage.removeItem("lk_refresh_token");
-    localStorage.removeItem("lk_expires_at");
-  }
-
-  function showToast(message) {
-    toast.textContent = humanizeError(message);
-    toast.classList.add("show");
-    clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => toast.classList.remove("show"), 5200);
-  }
-
-  function humanizeError(message) {
-    const text = String(message || "");
-
-    if (text.toLowerCase().includes("email not confirmed")) {
-      return "E-mail ainda não confirmado. Confirme pelo link enviado ou desligue a confirmação de e-mail no Supabase durante os testes.";
-    }
-
-    if (text.toLowerCase().includes("invalid login credentials")) {
-      return "E-mail ou senha incorretos.";
-    }
-
-    if (text.toLowerCase().includes("user already registered")) {
-      return "Essa conta já existe. Use Login em vez de Criar conta.";
-    }
-
-    if (text.toLowerCase().includes("oauth_failed")) {
-      return "Falha no login social. Verifique o provider no Supabase e a callback URL.";
-    }
-
-    if (text.toLowerCase().includes("mfa_required")) {
-      return "2FA obrigatório. Digite o código do Authenticator.";
-    }
-
-    if (text.toLowerCase().includes("invalid totp")) {
-      return "Código 2FA inválido. Aguarde mudar no app e tente novamente.";
-    }
-
-    if (text.toLowerCase().includes("invalid_code")) {
-      return "Código inválido ou expirado.";
-    }
-
-    if (text.toLowerCase().includes("email_code_required")) {
-      return "Digite o código enviado para seu e-mail.";
-    }
-
-    if (text.toLowerCase().includes("factor with the friendly name")) {
-      return "Já existe um fator 2FA com esse nome. O backend precisa usar nome único ou remover o fator antigo.";
-    }
-
-    if (text.toLowerCase().includes("not_authenticated")) {
-      return "Sessão não encontrada. Faça login novamente.";
-    }
-
-    return text;
-  }
-
-  function showLoading() {
-    loadingScreen.classList.remove("hidden");
-    authScreen.classList.add("hidden");
-    appScreen.classList.add("hidden");
-  }
-
-  function showAuth() {
-    loadingScreen.classList.add("hidden");
-    authScreen.classList.remove("hidden");
-    appScreen.classList.add("hidden");
-  }
-
-  function showApp() {
-    loadingScreen.classList.add("hidden");
-    authScreen.classList.add("hidden");
-    appScreen.classList.remove("hidden");
-  }
-
-  async function api(path, options = {}) {
-    const token = getStoredAccessToken();
-
-    const response = await fetch(`${API_BASE}${path}`, {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.headers || {})
-      },
-      ...options
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
     });
 
-    const data = await response.json().catch(() => ({}));
+    const allowedRedirectHosts = [
+      "lukintosh.com",
+      "www.lukintosh.com",
+      "developer.lukintosh.com",
+      "support.lukintosh.com",
+      "store.lukintosh.com",
+      "cloud.lukintosh.com",
+      "myaccount.lukintosh.com",
+      "myaccounts.lukintosh.com"
+    ];
 
-    if (!response.ok) {
-      const error = new Error(data.error || "Erro na API");
-      error.payload = data;
-      throw error;
-    }
-
-    return data;
-  }
-
-  function setMode(mode) {
-    state.mode = mode;
-
-    const isSignup = mode === "signup";
-
-    loginTab.classList.toggle("active", !isSignup);
-    signupTab.classList.toggle("active", isSignup);
-    displayNameLabel.classList.toggle("hidden", !isSignup);
-
-    authTitle.textContent = isSignup ? "Criar conta" : "Entrar";
-    authDescription.textContent = isSignup
-      ? "Crie uma conta Lukintosh para acessar o painel real."
-      : "Acesse sua conta Lukintosh para gerenciar segurança, sessões e configurações.";
-
-    authSubmit.textContent = isSignup ? "Criar conta" : "Entrar";
-    passwordInput.autocomplete = isSignup ? "new-password" : "current-password";
-  }
-
-  function showEmailCodeStep(email, challengeId) {
-    state.pendingEmailForCode = email;
-    state.pendingEmailChallenge = challengeId;
-
-    authForm.classList.add("hidden");
-    document.querySelector(".oauth-divider")?.classList.add("hidden");
-    document.querySelector(".oauth-grid")?.classList.add("hidden");
-    loginTab.disabled = true;
-    signupTab.disabled = true;
-
-    emailCodeBox.classList.remove("hidden");
-
-    emailCodeText.textContent = `Enviamos um código de 6 dígitos para ${email}.`;
-    emailCodeInput.value = "";
-    emailCodeInput.focus();
-
-    authTitle.textContent = "Código de verificação";
-    authDescription.textContent = "Digite o código enviado para concluir o login.";
-  }
-
-  function hideEmailCodeStep() {
-    state.pendingEmailForCode = null;
-    state.pendingEmailChallenge = null;
-
-    emailCodeBox.classList.add("hidden");
-    authForm.classList.remove("hidden");
-    document.querySelector(".oauth-divider")?.classList.remove("hidden");
-    document.querySelector(".oauth-grid")?.classList.remove("hidden");
-    loginTab.disabled = false;
-    signupTab.disabled = false;
-
-    emailCodeInput.value = "";
-
-    setMode(state.mode);
-  }
-
-  function initialFromName(nameOrEmail) {
-    return (nameOrEmail || "L").trim().charAt(0).toUpperCase();
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function renderAvatar(elementId, user, fallbackInitial) {
-    const el = document.querySelector(elementId);
-    if (!el) return;
-
-    if (user?.avatarUrl) {
-      el.innerHTML = `<img src="${escapeHtml(user.avatarUrl)}" alt="">`;
-    } else {
-      el.textContent = fallbackInitial;
-    }
-  }
-
-  function buildAccountFromUser(user, mfa = null) {
-    return {
-      verified: Boolean(user?.emailConfirmedAt),
-      provider: user?.provider || "email",
-      providers: user?.providers || [],
-      mfa,
-      twoFactorEnabled: Boolean(mfa?.enabled),
-      activeSessions: 1,
-      devices: 1,
-      securityChecks: {
-        emailVerified: Boolean(user?.emailConfirmedAt),
-        mfaEnabled: Boolean(mfa?.enabled),
-        sessionActive: true,
-        hasDeviceRecord: true
-      },
-      securityScore: mfa?.enabled ? 100 : 75
+    const appNames = {
+      developer: "Lukintosh Developer",
+      support: "Lukintosh Support",
+      store: "Lukintosh Store",
+      cloud: "Lukintosh Cloud",
+      accounts: "Lukintosh Accounts",
+      lukintosh: "Lukintosh"
     };
-  }
 
-  function openDashboardFromLoginData(data) {
-    if (!data?.user) return false;
+    const views = {
+      loading: document.getElementById("loadingView"),
+      login: document.getElementById("loginView"),
+      consent: document.getElementById("consentView"),
+      dashboard: document.getElementById("dashboardView")
+    };
 
-    state.user = data.user;
-    state.mfa = data.mfa || null;
-    state.account = buildAccountFromUser(data.user, data.mfa || null);
-    state.sessions = [];
+    const loginForm = document.getElementById("loginForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginSubmit = document.getElementById("loginSubmit");
+    const googleBtn = document.getElementById("googleBtn");
+    const loginStatus = document.getElementById("loginStatus");
 
-    renderAccount();
-    renderSessions();
-    renderMfa();
-    showApp();
+    const appPillText = document.getElementById("appPillText");
+    const consentTitle = document.getElementById("consentTitle");
+    const consentDesc = document.getElementById("consentDesc");
+    const profileName = document.getElementById("profileName");
+    const profileEmail = document.getElementById("profileEmail");
+    const allowBtn = document.getElementById("allowBtn");
+    const denyBtn = document.getElementById("denyBtn");
+    const consentStatus = document.getElementById("consentStatus");
 
-    return true;
-  }
+    const dashName = document.getElementById("dashName");
+    const dashEmail = document.getElementById("dashEmail");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const dashboardStatus = document.getElementById("dashboardStatus");
 
-  function renderAccount() {
-    const user = state.user;
-    const account = state.account;
-
-    if (!user) return;
-
-    const displayName = user.displayName || "Lukintosh Account";
-    const email = user.email || "";
-    const initial = initialFromName(displayName || email);
-
-    const connectedProviders = user.providerNames?.length
-      ? user.providerNames.join(", ")
-      : user.providerName || "Email";
-
-    const lastProvider = user.lastUsedProviderName || user.providerName || "Email";
-
-    document.querySelector("#sidebarName").textContent = displayName;
-    document.querySelector("#sidebarEmail").textContent = `${email} · ${connectedProviders}`;
-
-    document.querySelector("#accountName").textContent = displayName;
-    document.querySelector("#accountEmail").textContent = `${email} · Entrou com ${lastProvider}`;
-
-    renderAvatar("#sidebarInitial", user, initial);
-    renderAvatar("#mainInitial", user, initial);
-
-    document.querySelector("#profileDisplayName").value = displayName;
-    document.querySelector("#profileEmail").value = email;
-
-    document.querySelector("#securityScore").textContent =
-      Number.isFinite(account?.securityScore) ? `${account.securityScore}%` : "--";
-
-    document.querySelector("#activeSessions").textContent = account?.activeSessions ?? "--";
-    document.querySelector("#deviceCount").textContent = account?.devices ?? "--";
-
-    const verifiedBadge = document.querySelector("#verifiedBadge");
-
-    verifiedBadge.textContent = account?.verified
-      ? `● ${lastProvider}`
-      : "● Email pending";
-
-    verifiedBadge.classList.toggle("yellow", !account?.verified);
-  }
-
-  function renderSessions() {
-    const list = document.querySelector("#sessionsList");
-    const sessions = state.sessions || [];
-
-    if (!sessions.length) {
-      list.innerHTML = `
-        <div class="setting-row">
-          <div>
-            <h3>Sessão atual</h3>
-            <p>Login ativo neste navegador.</p>
-          </div>
-          <span class="tag">Atual</span>
-        </div>
-      `;
-      return;
+    function showView(name){
+      Object.values(views).forEach(view => view.classList.add("hidden"));
+      views[name].classList.remove("hidden");
     }
 
-    list.innerHTML = sessions.map(session => `
-      <div class="setting-row">
-        <div>
-          <h3>${escapeHtml(session.os || "Unknown device")}</h3>
-          <p>
-            ${escapeHtml(session.browser || "Web")}
-            · ${escapeHtml(session.location_label || "Location hidden")}
-            · ${new Date(session.last_seen_at || Date.now()).toLocaleString("pt-BR")}
-          </p>
-        </div>
-        <span class="tag">${session.current ? "Atual" : session.revoked ? "Revogada" : "Ativa"}</span>
-      </div>
-    `).join("");
-  }
+    function setStatus(element, message, type){
+      element.textContent = message || "";
+      element.classList.remove("error", "success");
 
-  function renderMfa() {
-    const mfa = state.mfa;
-    const enabled = Boolean(mfa?.enabled);
-    const needsChallenge = Boolean(mfa?.needsChallenge);
-
-    const statusText = document.querySelector("#mfaStatusText");
-    const enableButton = document.querySelector("#enableMfaButton");
-    const disableButton = document.querySelector("#disableMfaButton");
-    const badge = document.querySelector("#twoFactorBadge");
-    const mfaGate = document.querySelector("#mfaGate");
-    const systemDot = document.querySelector("#systemDot");
-    const systemStatusText = document.querySelector("#systemStatusText");
-
-    const factors = mfa?.factors || [];
-    state.currentVerifiedMfaFactorId = factors[0]?.id || null;
-
-    if (statusText) {
-      statusText.textContent = enabled
-        ? `2FA ativo. Nível atual: ${mfa.currentLevel || "aal1"}.`
-        : "2FA desativado. Ative para proteger melhor sua conta.";
-    }
-
-    if (enableButton) enableButton.classList.toggle("hidden", enabled);
-    if (disableButton) disableButton.classList.toggle("hidden", !enabled);
-
-    if (badge) {
-      badge.textContent = enabled ? "2FA: On" : "2FA: Off";
-      badge.classList.toggle("yellow", !enabled);
-    }
-
-    if (mfaGate) {
-      mfaGate.classList.toggle("hidden", !needsChallenge);
-    }
-
-    document.querySelectorAll(".protected-action").forEach((button) => {
-      button.disabled = needsChallenge;
-    });
-
-    if (systemDot) {
-      systemDot.classList.toggle("yellow", needsChallenge);
-    }
-
-    if (systemStatusText) {
-      systemStatusText.textContent = needsChallenge
-        ? "2FA verification required"
-        : "Account systems operational";
-    }
-  }
-
-  async function renderMfaQrCode(data) {
-    const qrBox = document.querySelector("#mfaQrBox");
-    const secretText = document.querySelector("#mfaSecretText");
-
-    if (!qrBox || !secretText) return;
-
-    qrBox.innerHTML = "";
-    secretText.textContent = "";
-    secretText.classList.add("hidden");
-
-    if (data.qrImage && String(data.qrImage).startsWith("data:image")) {
-      const img = document.createElement("img");
-      img.alt = "QR Code do 2FA";
-      img.src = data.qrImage;
-      img.width = 200;
-      img.height = 200;
-      img.style.width = "200px";
-      img.style.height = "200px";
-      img.style.display = "block";
-      img.style.objectFit = "contain";
-
-      img.onerror = () => {
-        qrBox.innerHTML = `<p>QR Code não carregou como imagem. Use o código manual abaixo.</p>`;
-      };
-
-      qrBox.appendChild(img);
-    } else if (data.qrCode && String(data.qrCode).trim().startsWith("<svg")) {
-      qrBox.innerHTML = data.qrCode;
-
-      const svg = qrBox.querySelector("svg");
-      if (svg) {
-        svg.setAttribute("width", "200");
-        svg.setAttribute("height", "200");
-        svg.style.width = "200px";
-        svg.style.height = "200px";
-        svg.style.display = "block";
+      if(type){
+        element.classList.add(type);
       }
-    } else {
-      qrBox.innerHTML = `<p>QR Code não foi gerado. Use o código manual abaixo.</p>`;
     }
 
-    if (data.secret) {
-      secretText.textContent = `Código manual: ${data.secret}`;
-      secretText.classList.remove("hidden");
-    } else if (data.uri) {
-      secretText.textContent = `URI manual: ${data.uri}`;
-      secretText.classList.remove("hidden");
-    }
-  }
-
-  async function loadMfaStatus() {
-    try {
-      const data = await api("/api/mfa/status");
-      state.mfa = data.mfa;
-      renderMfa();
-    } catch (error) {
-      console.warn("MFA status failed:", error.message);
-    }
-  }
-
-  async function loadAccount() {
-    showLoading();
-
-    try {
-      const me = await api("/api/me");
-      const status = await api("/api/account-status");
-      const sessions = await api("/api/sessions");
-
-      state.user = me.user;
-      state.mfa = me.mfa || status.account?.mfa || null;
-      state.account = status.account || buildAccountFromUser(me.user, state.mfa);
-      state.sessions = sessions.sessions || [];
-
-      renderAccount();
-      renderSessions();
-      renderMfa();
-      showApp();
-    } catch (error) {
-      state.user = null;
-      state.account = null;
-      state.sessions = [];
-      state.mfa = null;
-      showAuth();
-    }
-  }
-
-  function handleUrlError() {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get("error");
-
-    if (error) {
-      showToast(error);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }
-
-  async function handleEmailAuth(event) {
-    if (event) event.preventDefault();
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    const displayName = displayNameInput.value.trim();
-
-    if (!email || !password) {
-      showToast("Digite e-mail e senha.");
-      return;
+    function getParams(){
+      return new URLSearchParams(window.location.search);
     }
 
-    try {
-      authSubmit.disabled = true;
-      authSubmit.textContent = state.mode === "signup" ? "Criando..." : "Entrando...";
+    function normalizeAppName(app){
+      return appNames[app] || app || "Serviço Lukintosh";
+    }
 
-      if (state.mode === "signup") {
-        const data = await api("/api/signup", {
-          method: "POST",
-          body: JSON.stringify({ email, password, displayName })
-        });
+    function getAppFromRedirectUrl(url){
+      try{
+        const u = new URL(url);
 
-        if (data.session) {
-          storeSession(data.session);
+        if(u.hostname === "developer.lukintosh.com") return "developer";
+        if(u.hostname === "support.lukintosh.com") return "support";
+        if(u.hostname === "store.lukintosh.com") return "store";
+        if(u.hostname === "cloud.lukintosh.com") return "cloud";
+        if(u.hostname === "lukintosh.com" || u.hostname === "www.lukintosh.com") return "lukintosh";
+
+        return "accounts";
+      }catch(e){
+        return "accounts";
+      }
+    }
+
+    function isAllowedRedirect(url){
+      try{
+        const parsed = new URL(url);
+
+        if(parsed.protocol !== "https:"){
+          return false;
         }
 
-        showToast("Conta criada. Se confirmação por e-mail estiver ativa, verifique sua caixa de entrada.");
+        return allowedRedirectHosts.includes(parsed.hostname);
+      }catch(e){
+        return false;
+      }
+    }
 
-        if (data.user && openDashboardFromLoginData(data)) {
-          return;
-        }
+    function getRedirectFromParamsOrReferrer(){
+      const params = getParams();
 
-        await loadAccount();
+      const redirectParam =
+        params.get("redirect") ||
+        params.get("redirect_uri") ||
+        params.get("return_to") ||
+        params.get("next");
+
+      if(redirectParam && isAllowedRedirect(redirectParam)){
+        return redirectParam;
+      }
+
+      if(document.referrer){
+        try{
+          const refUrl = new URL(document.referrer);
+
+          if(allowedRedirectHosts.includes(refUrl.hostname)){
+            return refUrl.href;
+          }
+        }catch(e){}
+      }
+
+      return "";
+    }
+
+    function getCurrentApp(){
+      const params = getParams();
+      const appParam = params.get("app") || params.get("client_id");
+
+      if(appParam){
+        return appParam.toLowerCase();
+      }
+
+      const redirectUrl = getRedirectFromParamsOrReferrer();
+
+      if(redirectUrl){
+        return getAppFromRedirectUrl(redirectUrl);
+      }
+
+      return "accounts";
+    }
+
+    function shouldShowConsent(){
+      const redirectUrl = getRedirectFromParamsOrReferrer();
+
+      if(!redirectUrl){
+        return false;
+      }
+
+      try{
+        const redirectHost = new URL(redirectUrl).hostname;
+        const currentHost = window.location.hostname;
+
+        return redirectHost !== currentHost;
+      }catch(e){
+        return false;
+      }
+    }
+
+    function appendAuthResult(url, result, app){
+      const parsed = new URL(url);
+      parsed.searchParams.set("lukintosh_sso", result);
+      parsed.searchParams.set("app", app);
+
+      if(result === "success"){
+        parsed.searchParams.set("authorized", "1");
+      }
+
+      return parsed.toString();
+    }
+
+    function getDisplayName(user){
+      return (
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.email?.split("@")[0] ||
+        "Lukintosh User"
+      );
+    }
+
+    function fillUser(user){
+      const name = getDisplayName(user);
+      const email = user?.email || "user@lukintosh.com";
+
+      profileName.textContent = name;
+      profileEmail.textContent = email;
+
+      dashName.textContent = name;
+      dashEmail.textContent = email;
+    }
+
+    function renderConsent(user){
+      const app = getCurrentApp();
+      const appName = normalizeAppName(app);
+
+      fillUser(user);
+
+      appPillText.textContent = appName;
+      consentTitle.textContent = `${appName} quer acessar sua conta`;
+      consentDesc.textContent = `Permita que ${appName} use sua Lukintosh Account para continuar sem precisar fazer login novamente.`;
+
+      showView("consent");
+    }
+
+    function renderDashboard(user){
+      fillUser(user);
+      showView("dashboard");
+    }
+
+    async function handleSession(){
+      showView("loading");
+
+      const { data, error } = await supabaseClient.auth.getSession();
+
+      if(error){
+        console.error(error);
+        showView("login");
+        setStatus(loginStatus, "Não foi possível verificar sua sessão.", "error");
         return;
       }
 
-      const data = await api("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password })
-      });
+      const session = data.session;
 
-      if (data.emailCodeRequired) {
-        showEmailCodeStep(email, data.challengeId);
-        showToast("Código enviado para seu e-mail.");
+      if(!session){
+        showView("login");
         return;
       }
 
-      storeSession(data.session);
+      const user = session.user;
 
-      if (data.mfaRequired) {
-        showToast("Login feito. Agora confirme o código 2FA.");
-      } else {
-        showToast("Login realizado.");
+      if(shouldShowConsent()){
+        renderConsent(user);
+      }else{
+        renderDashboard(user);
       }
+    }
 
-      if (openDashboardFromLoginData(data)) {
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if(!email || !password){
+        setStatus(loginStatus, "Digite seu e-mail e senha.", "error");
         return;
       }
 
-      await loadAccount();
-    } catch (error) {
-      showToast(error.message);
-    } finally {
-      authSubmit.disabled = false;
-      authSubmit.textContent = state.mode === "signup" ? "Criar conta" : "Entrar";
-    }
-  }
+      loginSubmit.disabled = true;
+      loginSubmit.textContent = "Entrando...";
+      setStatus(loginStatus, "");
 
-  loginTab.addEventListener("click", () => setMode("login"));
-  signupTab.addEventListener("click", () => setMode("signup"));
-
-  authForm.addEventListener("submit", handleEmailAuth);
-
-  authSubmit.addEventListener("click", (event) => {
-    event.preventDefault();
-    handleEmailAuth(event);
-  });
-
-  verifyEmailCodeButton.addEventListener("click", async () => {
-    try {
-      const code = emailCodeInput.value.trim();
-
-      if (!state.pendingEmailChallenge) {
-        return showToast("Nenhum desafio de verificação ativo.");
-      }
-
-      if (!code || code.length !== 6) {
-        return showToast("Digite o código de 6 dígitos.");
-      }
-
-      verifyEmailCodeButton.disabled = true;
-      verifyEmailCodeButton.textContent = "Verificando...";
-
-      const data = await api("/api/login/verify-code", {
-        method: "POST",
-        body: JSON.stringify({
-          challengeId: state.pendingEmailChallenge,
-          code
-        })
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
       });
 
-      storeSession(data.session);
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = "Entrar";
 
-      hideEmailCodeStep();
-
-      if (data.mfaRequired) {
-        showToast("Código confirmado. Agora confirme o 2FA.");
-      } else {
-        showToast("Login confirmado.");
-      }
-
-      if (openDashboardFromLoginData(data)) {
+      if(error){
+        setStatus(loginStatus, error.message || "Falha ao entrar.", "error");
         return;
       }
 
-      await loadAccount();
-    } catch (error) {
-      showToast(error.message);
-    } finally {
-      verifyEmailCodeButton.disabled = false;
-      verifyEmailCodeButton.textContent = "Verificar código";
-    }
-  });
+      const user = data.user;
 
-  backToLoginButton.addEventListener("click", () => {
-    hideEmailCodeStep();
-  });
-
-  emailCodeInput.addEventListener("input", () => {
-    emailCodeInput.value = emailCodeInput.value.replace(/\D/g, "").slice(0, 6);
-
-    if (emailCodeInput.value.length === 6) {
-      verifyEmailCodeButton.click();
-    }
-  });
-
-  logoutButton.addEventListener("click", async () => {
-    clearStoredSession();
-
-    try {
-      await api("/api/logout", {
-        method: "POST"
-      });
-    } catch (error) {
-      console.warn("Logout API failed:", error.message);
-    }
-
-    state.user = null;
-    state.account = null;
-    state.sessions = [];
-    state.mfa = null;
-    state.currentMfaFactorId = null;
-    state.currentVerifiedMfaFactorId = null;
-    state.pendingEmailChallenge = null;
-    state.pendingEmailForCode = null;
-
-    emailInput.value = "";
-    passwordInput.value = "";
-    hideEmailCodeStep();
-
-    showToast("Você saiu da conta.");
-    showAuth();
-
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 250);
-  });
-
-  refreshButton.addEventListener("click", async () => {
-    await loadAccount();
-    showToast("Conta atualizada.");
-  });
-
-  copyUserIdButton.addEventListener("click", async () => {
-    if (!state.user?.id) return showToast("User ID indisponível.");
-
-    await navigator.clipboard.writeText(state.user.id);
-    showToast("User ID copiado.");
-  });
-
-  profileForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const displayName = document.querySelector("#profileDisplayName").value.trim();
-
-    try {
-      const data = await api("/api/me", {
-        method: "PATCH",
-        body: JSON.stringify({ displayName })
-      });
-
-      state.user = data.user;
-
-      renderAccount();
-      showToast("Perfil atualizado.");
-    } catch (error) {
-      showToast(error.message);
-      if (error.message === "mfa_required") await loadMfaStatus();
-    }
-  });
-
-  passwordForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const newPassword = document.querySelector("#newPasswordInput").value;
-
-    try {
-      await api("/api/password", {
-        method: "PATCH",
-        body: JSON.stringify({ newPassword })
-      });
-
-      document.querySelector("#newPasswordInput").value = "";
-      showToast("Senha alterada com sucesso.");
-    } catch (error) {
-      showToast(error.message);
-      if (error.message === "mfa_required") await loadMfaStatus();
-    }
-  });
-
-  document.querySelector("#enableMfaButton")?.addEventListener("click", async () => {
-    try {
-      const qrBox = document.querySelector("#mfaQrBox");
-      if (qrBox) {
-        qrBox.innerHTML = "<p>Gerando QR Code...</p>";
+      if(shouldShowConsent()){
+        renderConsent(user);
+      }else{
+        renderDashboard(user);
       }
-
-      const data = await api("/api/mfa/enroll", {
-        method: "POST",
-        body: JSON.stringify({
-          friendlyName: "Lukintosh Accounts"
-        })
-      });
-
-      state.currentMfaFactorId = data.factorId;
-
-      const setupBox = document.querySelector("#mfaSetupBox");
-      const codeInput = document.querySelector("#mfaCodeInput");
-
-      if (setupBox) setupBox.classList.remove("hidden");
-      if (codeInput) codeInput.value = "";
-
-      await renderMfaQrCode(data);
-
-      showToast("Escaneie o QR Code no Authenticator e digite o código.");
-    } catch (error) {
-      showToast(error.message);
-    }
-  });
-
-  document.querySelector("#verifyMfaButton")?.addEventListener("click", async () => {
-    try {
-      const code = document.querySelector("#mfaCodeInput").value.trim();
-
-      if (!state.currentMfaFactorId) {
-        return showToast("Clique em Ativar 2FA primeiro.");
-      }
-
-      if (!code || code.length !== 6) {
-        return showToast("Digite o código de 6 dígitos.");
-      }
-
-      await api("/api/mfa/verify", {
-        method: "POST",
-        body: JSON.stringify({
-          factorId: state.currentMfaFactorId,
-          code
-        })
-      });
-
-      document.querySelector("#mfaSetupBox").classList.add("hidden");
-      document.querySelector("#mfaCodeInput").value = "";
-
-      showToast("2FA ativado com sucesso.");
-      await loadAccount();
-    } catch (error) {
-      showToast(error.message);
-    }
-  });
-
-  document.querySelector("#disableMfaButton")?.addEventListener("click", async () => {
-    try {
-      if (!state.currentVerifiedMfaFactorId) {
-        return showToast("Nenhum fator 2FA encontrado.");
-      }
-
-      const ok = confirm("Tem certeza que deseja desativar o 2FA?");
-      if (!ok) return;
-
-      await api(`/api/mfa/factors/${state.currentVerifiedMfaFactorId}`, {
-        method: "DELETE"
-      });
-
-      showToast("2FA desativado.");
-      await loadAccount();
-    } catch (error) {
-      showToast(error.message);
-    }
-  });
-
-   document.querySelector("#verifyLoginMfaButton")?.addEventListener("click", async () => {
-    try {
-      const code = document.querySelector("#mfaLoginCodeInput").value.trim();
-
-      if (!code || code.length !== 6) {
-        return showToast("Digite o código de 6 dígitos.");
-      }
-
-      const factorId = state.currentVerifiedMfaFactorId || state.mfa?.factors?.[0]?.id;
-
-      if (!factorId) {
-        return showToast("Nenhum fator 2FA encontrado.");
-      }
-
-      const challenge = await api("/api/mfa/challenge", {
-        method: "POST",
-        body: JSON.stringify({ factorId })
-      });
-
-      await api("/api/mfa/challenge-verify", {
-        method: "POST",
-        body: JSON.stringify({
-          factorId,
-          challengeId: challenge.challengeId,
-          code
-        })
-      });
-
-      document.querySelector("#mfaLoginCodeInput").value = "";
-
-      showToast("2FA verificado.");
-      await loadAccount();
-    } catch (error) {
-      showToast(error.message);
-    }
-  });
-
-  document.querySelector("#revokeOtherSessionsButton")?.addEventListener("click", async () => {
-    try {
-      const ok = confirm("Revogar todas as outras sessões?");
-      if (!ok) return;
-
-      await api("/api/sessions/revoke-all-others", {
-        method: "POST"
-      });
-
-      showToast("Outras sessões revogadas.");
-      await loadAccount();
-    } catch (error) {
-      showToast(error.message);
-      if (error.message === "mfa_required") await loadMfaStatus();
-    }
-  });
-
-  document.querySelectorAll("[data-toast]").forEach(button => {
-    button.addEventListener("click", () => showToast(button.dataset.toast));
-  });
-
-  document.querySelectorAll("[data-toggle-password]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const input = document.getElementById(button.dataset.togglePassword);
-      if (!input) return;
-
-      const isPassword = input.type === "password";
-      input.type = isPassword ? "text" : "password";
-      button.textContent = isPassword ? "Ocultar" : "Mostrar";
     });
-  });
 
-  window.__LUK_ACCOUNTS_VERSION = "email-code-session-v4";
-  console.log("Lukintosh Accounts version:", window.__LUK_ACCOUNTS_VERSION);
+    googleBtn.addEventListener("click", async () => {
+      const redirectBackToMyAccount = window.location.href;
 
-  setMode("login");
-  handleUrlError();
-  loadAccount();
-</script>
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectBackToMyAccount
+        }
+      });
+
+      if(error){
+        setStatus(loginStatus, error.message || "Falha ao abrir login com Google.", "error");
+      }
+    });
+
+    allowBtn.addEventListener("click", async () => {
+      const redirectUrl = getRedirectFromParamsOrReferrer();
+      const app = getCurrentApp();
+
+      if(!redirectUrl || !isAllowedRedirect(redirectUrl)){
+        setStatus(consentStatus, "Redirect não permitido.", "error");
+        return;
+      }
+
+      localStorage.setItem(`lukintosh_authorized_${app}`, "true");
+      localStorage.setItem(`lukintosh_authorized_${app}_at`, new Date().toISOString());
+
+      const destination = appendAuthResult(redirectUrl, "success", app);
+      window.location.href = destination;
+    });
+
+    denyBtn.addEventListener("click", () => {
+      const redirectUrl = getRedirectFromParamsOrReferrer();
+
+      if(redirectUrl && isAllowedRedirect(redirectUrl)){
+        const app = getCurrentApp();
+        window.location.href = appendAuthResult(redirectUrl, "denied", app);
+      }else{
+        showView("dashboard");
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      setStatus(dashboardStatus, "Saindo...");
+
+      const { error } = await supabaseClient.auth.signOut();
+
+      if(error){
+        setStatus(dashboardStatus, error.message || "Erro ao sair.", "error");
+        return;
+      }
+
+      showView("login");
+      setStatus(loginStatus, "Você saiu da conta.", "success");
+    });
+
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if(event === "SIGNED_IN" && session?.user){
+        if(shouldShowConsent()){
+          renderConsent(session.user);
+        }else{
+          renderDashboard(session.user);
+        }
+      }
+
+      if(event === "SIGNED_OUT"){
+        showView("login");
+      }
+    });
+
+    handleSession();
+  </script>
 </body>
 </html>
