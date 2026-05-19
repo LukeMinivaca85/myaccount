@@ -2341,17 +2341,17 @@ authForm.addEventListener("submit", handleEmailAuth);
     return appNames[app] || app;
   }
 
-  function getRedirectUrl(){
-    const params = getParams();
+ function getRedirectUrl(){
+  const params = getParams();
 
-    return (
-      params.get("redirect") ||
-      params.get("redirect_uri") ||
-      params.get("return_to") ||
-      params.get("next") ||
-      "https://developer.lukintosh.com/"
-    );
-  }
+  return (
+    params.get("redirect") ||
+    params.get("redirect_uri") ||
+    params.get("return_to") ||
+    params.get("next") ||
+    "https://lukintosh.com/"
+  );
+}
 
   function isAllowedRedirect(url){
     try{
@@ -2362,19 +2362,9 @@ authForm.addEventListener("submit", handleEmailAuth);
     }
   }
 
-  function shouldShowConsent(){
-    const params = getParams();
-
-    return !!(
-      params.get("app") ||
-      params.get("client_id") ||
-      params.get("redirect") ||
-      params.get("redirect_uri") ||
-      params.get("return_to") ||
-      params.get("next")
-    );
-  }
-
+function shouldShowConsent(){
+  return hasLoginRequestContext();
+}
   function goBackToApp(result){
     const app = getApp();
     const redirectUrl = getRedirectUrl();
@@ -2394,17 +2384,38 @@ authForm.addEventListener("submit", handleEmailAuth);
     window.location.href = destination.toString();
   }
 
-  function updateOAuthReturnLinks(){
-    const returnTo = encodeURIComponent(window.location.href);
+ function hasLoginRequestContext(){
+  const params = getParams();
 
-    document.querySelectorAll('a[href^="https://auth.lukintosh.com/auth/"]').forEach((link) => {
-      try{
-        const url = new URL(link.href);
-        url.searchParams.set("returnTo", window.location.href);
-        link.href = url.toString();
-      }catch(e){}
-    });
+  return !!(
+    params.get("app") ||
+    params.get("client_id") ||
+    params.get("redirect") ||
+    params.get("redirect_uri") ||
+    params.get("return_to") ||
+    params.get("next")
+  );
+}
+
+function getOAuthReturnTo(){
+  if(hasLoginRequestContext()){
+    return window.location.href;
   }
+
+  return "https://lukintosh.com/";
+}
+
+function updateOAuthReturnLinks(){
+  const returnTo = getOAuthReturnTo();
+
+  document.querySelectorAll('a[href^="https://auth.lukintosh.com/auth/"]').forEach((link) => {
+    try{
+      const url = new URL(link.href);
+      url.searchParams.set("returnTo", returnTo);
+      link.href = url.toString();
+    }catch(e){}
+  });
+}
 
   document.querySelector("#allowBtn")?.addEventListener("click", () => {
     goBackToApp("success");
