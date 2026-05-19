@@ -1043,33 +1043,6 @@
           <button class="btn" id="backToLoginButton" type="button">Voltar</button>
         </div>
       </section>
-<section id="consentView" class="card hidden">
-  <div class="kicker">Lukintosh Account</div>
-
-  <div class="app-pill">
-    <span class="dot"></span>
-    <span id="appPillText">Lukintosh Developer</span>
-  </div>
-
-  <h1 id="consentTitle">Lukintosh Developer quer acessar sua conta</h1>
-
-  <p class="desc" id="consentDesc">
-    Permita que este serviço use sua Lukintosh Account para continuar.
-  </p>
-
-  <div class="permissions">
-    <div class="permission">✓ Confirmar que você está logado</div>
-    <div class="permission">✓ Usar sua conta Lukintosh neste serviço</div>
-    <div class="permission">✓ Continuar sem repetir a entrada</div>
-  </div>
-
-  <div class="row">
-    <button class="secondary" type="button" id="denyBtn">Cancelar</button>
-    <button class="primary" type="button" id="allowBtn">Permitir</button>
-  </div>
-
-  <div class="status" id="consentStatus"></div>
-</section>
       <div class="oauth-divider">
         <span></span>
         <p>ou entre com</p>
@@ -1127,6 +1100,42 @@
         <span>•</span>
         <a href="https://support.lukintosh.com">Support</a>
       </div>
+    </section>
+  </div>
+
+  <div id="consentScreen" class="auth-screen hidden">
+    <section id="consentView" class="auth-card">
+      <div class="brand">
+        <div class="mark"></div>
+        <div>
+          <strong>Lukintosh Accounts</strong>
+          <span>Permission request</span>
+        </div>
+      </div>
+
+      <div class="app-pill">
+        <span class="dot"></span>
+        <span id="appPillText">Lukintosh Developer</span>
+      </div>
+
+      <h1 id="consentTitle">Lukintosh Developer quer acessar sua conta</h1>
+
+      <p id="consentDesc">
+        Permita que este serviço use sua Lukintosh Account para continuar.
+      </p>
+
+      <div class="permissions">
+        <div class="permission">✓ Confirmar que você está logado</div>
+        <div class="permission">✓ Usar sua conta Lukintosh neste serviço</div>
+        <div class="permission">✓ Continuar sem repetir a entrada</div>
+      </div>
+
+      <div class="row">
+        <button class="btn" type="button" id="denyBtn">Cancelar</button>
+        <button class="btn primary" type="button" id="allowBtn">Permitir</button>
+      </div>
+
+      <div class="status" id="consentStatus"></div>
     </section>
   </div>
 
@@ -1419,6 +1428,7 @@
   const loadingScreen = document.querySelector("#loadingScreen");
   const authScreen = document.querySelector("#authScreen");
   const appScreen = document.querySelector("#appScreen");
+  const consentScreen = document.querySelector("#consentScreen");
   const toast = document.querySelector("#toast");
 
   const loginTab = document.querySelector("#loginTab");
@@ -1525,18 +1535,35 @@
     loadingScreen.classList.remove("hidden");
     authScreen.classList.add("hidden");
     appScreen.classList.add("hidden");
+    consentScreen.classList.add("hidden");
   }
 
   function showAuth() {
     loadingScreen.classList.add("hidden");
     authScreen.classList.remove("hidden");
     appScreen.classList.add("hidden");
+    consentScreen.classList.add("hidden");
   }
 
   function showApp() {
     loadingScreen.classList.add("hidden");
     authScreen.classList.add("hidden");
     appScreen.classList.remove("hidden");
+    consentScreen.classList.add("hidden");
+  }
+
+  function showConsentView() {
+    loadingScreen.classList.add("hidden");
+    authScreen.classList.add("hidden");
+    appScreen.classList.add("hidden");
+    consentScreen.classList.remove("hidden");
+
+    const appName = getAppName();
+
+    document.querySelector("#appPillText").innerText = appName;
+    document.querySelector("#consentTitle").innerText = `${appName} quer acessar sua conta`;
+    document.querySelector("#consentDesc").innerText =
+      `Permita que ${appName} use sua Lukintosh Account para continuar.`;
   }
 
   async function api(path, options = {}) {
@@ -1671,7 +1698,12 @@
     renderAccount();
     renderSessions();
     renderMfa();
-    showApp();
+
+    if (shouldShowConsent()) {
+      showConsentView();
+    } else {
+      showApp();
+    }
 
     return true;
   }
@@ -1876,7 +1908,12 @@
       renderAccount();
       renderSessions();
       renderMfa();
-      showApp();
+
+      if (shouldShowConsent()) {
+        showConsentView();
+      } else {
+        showApp();
+      }
     } catch (error) {
       state.user = null;
       state.account = null;
@@ -2265,125 +2302,129 @@
     });
   });
 
+
+  const allowedRedirectHosts = [
+    "lukintosh.com",
+    "www.lukintosh.com",
+    "developer.lukintosh.com",
+    "support.lukintosh.com",
+    "store.lukintosh.com",
+    "cloud.lukintosh.com",
+    "myaccount.lukintosh.com",
+    "myaccounts.lukintosh.com",
+    "accounts.lukintosh.com"
+  ];
+
+  const appNames = {
+    developer: "Lukintosh Developer",
+    support: "Lukintosh Support",
+    store: "Lukintosh Store",
+    cloud: "Lukintosh Cloud",
+    accounts: "Lukintosh Accounts",
+    account: "Lukintosh Account",
+    lukintosh: "Lukintosh"
+  };
+
+  function getParams(){
+    return new URLSearchParams(window.location.search);
+  }
+
+  function getApp(){
+    const params = getParams();
+
+    return (
+      params.get("app") ||
+      params.get("client_id") ||
+      "developer"
+    ).toLowerCase();
+  }
+
+  function getAppName(){
+    const app = getApp();
+    return appNames[app] || app;
+  }
+
+  function getRedirectUrl(){
+    const params = getParams();
+
+    return (
+      params.get("redirect") ||
+      params.get("redirect_uri") ||
+      params.get("return_to") ||
+      params.get("next") ||
+      "https://developer.lukintosh.com/"
+    );
+  }
+
+  function isAllowedRedirect(url){
+    try{
+      const parsed = new URL(url);
+      return parsed.protocol === "https:" && allowedRedirectHosts.includes(parsed.hostname);
+    }catch(e){
+      return false;
+    }
+  }
+
+  function shouldShowConsent(){
+    const params = getParams();
+
+    return !!(
+      params.get("app") ||
+      params.get("client_id") ||
+      params.get("redirect") ||
+      params.get("redirect_uri") ||
+      params.get("return_to") ||
+      params.get("next")
+    );
+  }
+
+  function goBackToApp(result){
+    const app = getApp();
+    const redirectUrl = getRedirectUrl();
+
+    if(!isAllowedRedirect(redirectUrl)){
+      const status = document.querySelector("#consentStatus");
+      if(status) status.innerText = "Redirect não permitido.";
+      return;
+    }
+
+    const destination = new URL(redirectUrl);
+
+    destination.searchParams.set("lukintosh_sso", result);
+    destination.searchParams.set("app", app);
+    destination.searchParams.set("authorized", result === "success" ? "1" : "0");
+
+    window.location.href = destination.toString();
+  }
+
+  function updateOAuthReturnLinks(){
+    const returnTo = encodeURIComponent(window.location.href);
+
+    document.querySelectorAll('a[href^="https://auth.lukintosh.com/auth/"]').forEach((link) => {
+      try{
+        const url = new URL(link.href);
+        url.searchParams.set("returnTo", window.location.href);
+        link.href = url.toString();
+      }catch(e){}
+    });
+  }
+
+  document.querySelector("#allowBtn")?.addEventListener("click", () => {
+    goBackToApp("success");
+  });
+
+  document.querySelector("#denyBtn")?.addEventListener("click", () => {
+    goBackToApp("denied");
+  });
+
+
   window.__LUK_ACCOUNTS_VERSION = "email-code-session-v4";
   console.log("Lukintosh Accounts version:", window.__LUK_ACCOUNTS_VERSION);
 
+  updateOAuthReturnLinks();
   setMode("login");
   handleUrlError();
   loadAccount();
-    const allowedRedirectHosts = [
-  "lukintosh.com",
-  "www.lukintosh.com",
-  "developer.lukintosh.com",
-  "support.lukintosh.com",
-  "store.lukintosh.com",
-  "cloud.lukintosh.com",
-  "myaccount.lukintosh.com"
-];
-
-const appNames = {
-  developer: "Lukintosh Developer",
-  support: "Lukintosh Support",
-  store: "Lukintosh Store",
-  cloud: "Lukintosh Cloud",
-  lukintosh: "Lukintosh"
-};
-
-function getParams(){
-  return new URLSearchParams(window.location.search);
-}
-
-function getApp(){
-  const params = getParams();
-  return (params.get("app") || params.get("client_id") || "developer").toLowerCase();
-}
-
-function getAppName(){
-  const app = getApp();
-  return appNames[app] || app;
-}
-
-function getRedirectUrl(){
-  const params = getParams();
-
-  return (
-    params.get("redirect") ||
-    params.get("redirect_uri") ||
-    params.get("return_to") ||
-    params.get("next") ||
-    "https://developer.lukintosh.com/"
-  );
-}
-
-function isAllowedRedirect(url){
-  try{
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" && allowedRedirectHosts.includes(parsed.hostname);
-  }catch(e){
-    return false;
-  }
-}
-
-function shouldShowConsent(){
-  const params = getParams();
-
-  return !!(
-    params.get("app") ||
-    params.get("client_id") ||
-    params.get("redirect") ||
-    params.get("redirect_uri") ||
-    params.get("return_to") ||
-    params.get("next")
-  );
-}
-if(shouldShowConsent()){
-  showConsentView();
-}else{
-  window.location.href = "/dashboard";
-}
-function showConsentView(){
-  const loginView = document.getElementById("loginView");
-  const dashboardView = document.getElementById("dashboardView");
-  const consentView = document.getElementById("consentView");
-
-  if(loginView) loginView.classList.add("hidden");
-  if(dashboardView) dashboardView.classList.add("hidden");
-  if(consentView) consentView.classList.remove("hidden");
-
-  const appName = getAppName();
-
-  document.getElementById("appPillText").innerText = appName;
-  document.getElementById("consentTitle").innerText = `${appName} quer acessar sua conta`;
-  document.getElementById("consentDesc").innerText =
-    `Permita que ${appName} use sua Lukintosh Account para continuar.`;
-}
-
-function goBackToApp(result){
-  const app = getApp();
-  const redirectUrl = getRedirectUrl();
-
-  if(!isAllowedRedirect(redirectUrl)){
-    const status = document.getElementById("consentStatus");
-    if(status) status.innerText = "Redirect não permitido.";
-    return;
-  }
-
-  const destination = new URL(redirectUrl);
-
-  destination.searchParams.set("lukintosh_sso", result);
-  destination.searchParams.set("app", app);
-  destination.searchParams.set("authorized", result === "success" ? "1" : "0");
-
-  window.location.href = destination.toString();
-}
-
-document.getElementById("allowBtn")?.addEventListener("click", () => {
-  goBackToApp("success");
-});
-
-document.getElementById("denyBtn")?.addEventListener("click", () => {
-  goBackToApp("denied");
-});
 </script>
 
 </body>
