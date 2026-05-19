@@ -612,28 +612,22 @@
       return "accounts";
     }
 
-  function shouldShowConsent(){
-  const params = getParams();
+    function shouldShowConsent(){
+      const redirectUrl = getRedirectFromParamsOrReferrer();
 
-  if(params.get("app") || params.get("client_id")){
-    return true;
-  }
+      if(!redirectUrl){
+        return false;
+      }
 
-  const redirectUrl = getRedirectFromParamsOrReferrer();
+      try{
+        const redirectHost = new URL(redirectUrl).hostname;
+        const currentHost = window.location.hostname;
 
-  if(!redirectUrl){
-    return false;
-  }
-
-  try{
-    const redirectHost = new URL(redirectUrl).hostname;
-    const currentHost = window.location.hostname;
-
-    return redirectHost !== currentHost;
-  }catch(e){
-    return false;
-  }
-}
+        return redirectHost !== currentHost;
+      }catch(e){
+        return false;
+      }
+    }
 
     function appendAuthResult(url, result, app){
       const parsed = new URL(url);
