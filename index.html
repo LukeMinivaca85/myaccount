@@ -1699,14 +1699,29 @@
     renderSessions();
     renderMfa();
 
-    if (shouldShowConsent()) {
-      showConsentView();
-    } else {
-      showApp();
-    }
+  const params = new URLSearchParams(window.location.search);
+  const returnTo = params.get("returnTo");
 
-    return true;
+  if (returnTo) {
+    try {
+      const url = new URL(returnTo);
+
+      if (url.origin === "https://auth.lukintosh.com") {
+        window.location.href = url.toString();
+        return true;
+      }
+    } catch {
+      // Ignora returnTo inválido e continua o fluxo normal
+    }
   }
+
+  if (shouldShowConsent()) {
+    showConsentView();
+  } else {
+    showApp();
+  }
+
+  return true;
 
   function renderAccount() {
     const user = state.user;
