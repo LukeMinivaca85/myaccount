@@ -1907,36 +1907,36 @@
     }
   }
 
-  async function loadAccount() {
-    showLoading();
+async function loadAccount() {
+  showLoading();
 
-    try {
-      const me = await api("/api/me");
-      const status = await api("/api/account-status");
-      const sessions = await api("/api/sessions");
+  try {
+    const me = await api("/api/me");
+    const status = await api("/api/account-status");
+    const sessions = await api("/api/sessions");
 
-      state.user = me.user;
-      state.mfa = me.mfa || status.account?.mfa || null;
-      state.account = status.account || buildAccountFromUser(me.user, state.mfa);
-      state.sessions = sessions.sessions || [];
+    state.user = me.user;
+    state.mfa = me.mfa || status.account?.mfa || null;
+    state.account = status.account || buildAccountFromUser(me.user, state.mfa);
+    state.sessions = sessions.sessions || [];
 
-      renderAccount();
-      renderSessions();
-      renderMfa();
+    renderAccount();
+    renderSessions();
+    renderMfa();
 
-      if (shouldShowConsent()) {
-        showConsentView();
-      } else {
-        showApp();
-      }
-    } catch (error) {
-      state.user = null;
-      state.account = null;
-      state.sessions = [];
-      state.mfa = null;
-      showAuth();
+    if (shouldShowConsent()) {
+      showConsentView();
+    } else {
+      showApp();
     }
+  } catch (error) {
+    state.user = null;
+    state.account = null;
+    state.sessions = [];
+    state.mfa = null;
+    showAuth();
   }
+}
 
   function handleUrlError() {
     const params = new URLSearchParams(window.location.search);
