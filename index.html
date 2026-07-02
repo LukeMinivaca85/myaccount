@@ -879,6 +879,100 @@
       border-radius: 14px;
     }
 
+    .developer-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, .82fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .code-box,
+    .secret-box {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.055);
+      color: rgba(245,245,247,.86);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .secret-box {
+      border-color: rgba(255,209,102,.22);
+      background: rgba(255,209,102,.075);
+    }
+
+    .scope-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .scope-grid label {
+      width: auto;
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.045);
+      color: rgba(245,245,247,.82);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .scope-grid input {
+      width: auto;
+      accent-color: #8ab4ff;
+    }
+
+    .signin-preview {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 54px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: #f5f5f7;
+      color: #050507;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .signin-preview .mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      margin: 0;
+    }
+
+    .app-credential-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .app-credential-row code {
+      min-width: 0;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid var(--line);
+      overflow-wrap: anywhere;
+      font-size: 12px;
+    }
+
     .mfa-gate {
       border: 1px solid rgba(255, 209, 102, .24);
       background: rgba(255, 209, 102, .08);
@@ -927,7 +1021,8 @@
       }
 
       .hero-grid,
-      .grid {
+      .grid,
+      .developer-layout {
         grid-template-columns: 1fr;
       }
     }
@@ -955,7 +1050,8 @@
       }
 
       .id-metrics,
-      .setting-row {
+      .setting-row,
+      .app-credential-row {
         grid-template-columns: 1fr;
       }
 
@@ -1156,6 +1252,7 @@
         <a href="#security"><span class="nav-icon">◆</span> Segurança</a>
         <a href="#sessions"><span class="nav-icon">●</span> Sessões</a>
         <a href="#privacy"><span class="nav-icon">◇</span> Privacidade</a>
+        <a href="#developers"><span class="nav-icon">⌘</span> Developers</a>
       </nav>
 
       <div class="nav-label">System</div>
@@ -1400,13 +1497,81 @@
           </div>
         </div>
       </section>
+
+      <section class="panel" id="developers">
+        <div class="panel-head">
+          <div>
+            <h2>Developers</h2>
+            <p>Crie apps para outros sites usarem o botão Entrar com Lukintosh via OAuth 2.1 e OpenID Connect.</p>
+          </div>
+          <span class="tag">OAuth 2.1</span>
+        </div>
+
+        <div class="panel-body">
+          <div class="developer-layout">
+            <form id="developerAppForm" class="settings">
+              <label>
+                Nome do app
+                <input id="developerAppName" type="text" maxlength="80" placeholder="Minha Loja" required>
+              </label>
+
+              <label>
+                URL de callback
+                <input id="developerCallbackUrl" type="url" placeholder="https://example.com/auth/lukintosh/callback" required>
+              </label>
+
+              <div>
+                <p style="color: var(--muted); font-size: 13px; margin-bottom: 8px;">Scopes permitidos</p>
+                <div class="scope-grid">
+                  <label><input type="checkbox" name="developerScope" value="openid" checked disabled> openid</label>
+                  <label><input type="checkbox" name="developerScope" value="profile" checked> profile</label>
+                  <label><input type="checkbox" name="developerScope" value="email" checked> email</label>
+                </div>
+              </div>
+
+              <button class="btn primary protected-action" type="submit">Criar app OAuth</button>
+
+              <div id="createdAppCredentials" class="secret-box hidden"></div>
+            </form>
+
+            <aside class="settings">
+              <div class="setting-row">
+                <div>
+                  <h3>Preview do botão</h3>
+                  <p>Este é o botão que o dev coloca no próprio site. O backend exige Authorization Code Flow com PKCE.</p>
+                </div>
+              </div>
+
+              <button class="signin-preview" type="button" data-toast="Crie um app para gerar client_id, client_secret e URL de autorização.">
+                <span class="mark"></span>
+                Entrar com Lukintosh
+              </button>
+
+              <div class="code-box" id="signinSnippet">&lt;button&gt;Entrar com Lukintosh&lt;/button&gt;</div>
+              <button class="btn" id="copySigninSnippetButton" type="button">Copiar exemplo</button>
+            </aside>
+          </div>
+
+          <div class="settings" id="developerAppsList" style="margin-top: 14px;">
+            <div class="setting-row">
+              <div>
+                <h3>Nenhum app carregado</h3>
+                <p>Crie um app OAuth para ver client_id, callback e status.</p>
+              </div>
+              <span class="tag">Apps</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-  const API_BASE = "https://auth.lukintosh.com";
+  const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? "http://localhost:3000"
+    : "https://auth.lukintosh.com";
 
   if (window.location.hash.includes("access_token")) {
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -1422,7 +1587,9 @@
     currentMfaFactorId: null,
     currentVerifiedMfaFactorId: null,
     pendingEmailChallenge: null,
-    pendingEmailForCode: null
+    pendingEmailForCode: null,
+    developerApps: [],
+    signinSnippet: ""
   };
 
   const loadingScreen = document.querySelector("#loadingScreen");
@@ -1453,6 +1620,11 @@
   const copyUserIdButton = document.querySelector("#copyUserIdButton");
   const profileForm = document.querySelector("#profileForm");
   const passwordForm = document.querySelector("#passwordForm");
+  const developerAppForm = document.querySelector("#developerAppForm");
+  const developerAppsList = document.querySelector("#developerAppsList");
+  const createdAppCredentials = document.querySelector("#createdAppCredentials");
+  const signinSnippet = document.querySelector("#signinSnippet");
+  const copySigninSnippetButton = document.querySelector("#copySigninSnippetButton");
 
   function getStoredAccessToken() {
     return localStorage.getItem("lk_access_token") || "";
@@ -1526,6 +1698,14 @@
 
     if (text.toLowerCase().includes("not_authenticated")) {
       return "Sessão não encontrada. Faça login novamente.";
+    }
+
+    if (text.toLowerCase().includes("redirect_uri_must_use_https")) {
+      return "A callback URL precisa usar HTTPS. Para testes locais, http://localhost também é aceito.";
+    }
+
+    if (text.toLowerCase().includes("developer_app_create_failed")) {
+      return "Não consegui criar o app OAuth. Rode a SQL de apps OAuth no Supabase e tente de novo.";
     }
 
     return text;
@@ -1698,6 +1878,7 @@
     renderAccount();
     renderSessions();
     renderMfa();
+    loadDeveloperApps();
 
     if (shouldShowConsent()) {
       showConsentView();
@@ -1781,6 +1962,96 @@
         <span class="tag">${session.current ? "Atual" : session.revoked ? "Revogada" : "Ativa"}</span>
       </div>
     `).join("");
+  }
+
+  function buildAuthorizeUrl(app) {
+    const redirectUri = app?.redirectUris?.[0] || "https://example.com/auth/lukintosh/callback";
+    const scopes = app?.allowedScopes?.length ? app.allowedScopes.join(" ") : "openid profile email";
+    const url = new URL(`${API_BASE}/oauth/authorize`);
+
+    url.searchParams.set("client_id", app?.clientId || "SEU_CLIENT_ID");
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", scopes);
+    url.searchParams.set("state", "STATE_ALEATORIO");
+    url.searchParams.set("code_challenge", "CODE_CHALLENGE_S256");
+    url.searchParams.set("code_challenge_method", "S256");
+
+    return url.toString();
+  }
+
+  function buildSigninSnippet(app = null) {
+    return `<a class="lukintosh-signin" href="${buildAuthorizeUrl(app)}">
+  Entrar com Lukintosh
+</a>`;
+  }
+
+  function updateSigninSnippet(app = null) {
+    state.signinSnippet = buildSigninSnippet(app);
+    if (signinSnippet) signinSnippet.textContent = state.signinSnippet;
+  }
+
+  function renderDeveloperApps() {
+    if (!developerAppsList) return;
+
+    const apps = state.developerApps || [];
+
+    if (!apps.length) {
+      developerAppsList.innerHTML = `
+        <div class="setting-row">
+          <div>
+            <h3>Nenhum app OAuth ainda</h3>
+            <p>Crie um app para gerar client_id, client_secret e URL de autorização.</p>
+          </div>
+          <span class="tag">Apps</span>
+        </div>
+      `;
+      updateSigninSnippet(null);
+      return;
+    }
+
+    updateSigninSnippet(apps[0]);
+
+    developerAppsList.innerHTML = apps.map((app) => `
+      <div class="setting-row">
+        <div>
+          <h3>${escapeHtml(app.name || "App OAuth")}</h3>
+          <p>${escapeHtml((app.redirectUris || [])[0] || "Callback não definido")}</p>
+
+          <div class="app-credential-row">
+            <code>${escapeHtml(app.clientId)}</code>
+            <button class="btn" type="button" data-copy-value="${escapeHtml(app.clientId)}">Copiar client_id</button>
+          </div>
+
+          <div class="code-box">${escapeHtml(buildAuthorizeUrl(app))}</div>
+        </div>
+
+        <div style="display:grid; gap:10px; justify-items:end;">
+          <span class="tag ${app.isActive ? "" : "red"}">${app.isActive ? "Ativo" : "Revogado"}</span>
+          <button class="btn red protected-action" type="button" data-revoke-client="${escapeHtml(app.clientId)}">Revogar</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function loadDeveloperApps() {
+    try {
+      const data = await api("/api/developer/oauth/apps");
+      state.developerApps = data.apps || [];
+      renderDeveloperApps();
+    } catch (error) {
+      if (developerAppsList) {
+        developerAppsList.innerHTML = `
+          <div class="setting-row">
+            <div>
+              <h3>Apps OAuth indisponíveis</h3>
+              <p>${escapeHtml(error.payload?.message || error.message)}</p>
+            </div>
+            <span class="tag yellow">Config</span>
+          </div>
+        `;
+      }
+    }
   }
 
   function renderMfa() {
@@ -1908,6 +2179,7 @@
       renderAccount();
       renderSessions();
       renderMfa();
+      await loadDeveloperApps();
 
       if (shouldShowConsent()) {
         showConsentView();
@@ -2005,8 +2277,6 @@
   signupTab.addEventListener("click", () => setMode("signup"));
 
   authForm.addEventListener("submit", handleEmailAuth);
-
-authForm.addEventListener("submit", handleEmailAuth);
 
   verifyEmailCodeButton.addEventListener("click", async () => {
     try {
@@ -2108,6 +2378,93 @@ authForm.addEventListener("submit", handleEmailAuth);
 
     await navigator.clipboard.writeText(state.user.id);
     showToast("User ID copiado.");
+  });
+
+  copySigninSnippetButton?.addEventListener("click", async () => {
+    updateSigninSnippet(state.developerApps?.[0] || null);
+    await navigator.clipboard.writeText(state.signinSnippet);
+    showToast("Exemplo do botão copiado.");
+  });
+
+  developerAppForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const name = document.querySelector("#developerAppName").value.trim();
+    const callbackUrl = document.querySelector("#developerCallbackUrl").value.trim();
+    const scopes = [...document.querySelectorAll('input[name="developerScope"]:checked')]
+      .map((input) => input.value);
+
+    try {
+      const submit = developerAppForm.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      submit.textContent = "Criando...";
+
+      const data = await api("/api/developer/oauth/apps", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          callbackUrl,
+          scopes: ["openid", ...scopes.filter((scope) => scope !== "openid")]
+        })
+      });
+
+      const app = data.app;
+
+      if (createdAppCredentials && app) {
+        createdAppCredentials.classList.remove("hidden");
+        createdAppCredentials.innerHTML = `
+Client ID:
+${escapeHtml(app.clientId)}
+
+Client Secret:
+${escapeHtml(app.clientSecret)}
+
+Guarde o client_secret agora. Ele não será mostrado novamente.`;
+      }
+
+      document.querySelector("#developerAppName").value = "";
+      document.querySelector("#developerCallbackUrl").value = "";
+
+      state.developerApps = [app, ...(state.developerApps || [])].filter(Boolean);
+      renderDeveloperApps();
+      showToast("App OAuth criado.");
+    } catch (error) {
+      showToast(error.payload?.message || error.message);
+    } finally {
+      const submit = developerAppForm.querySelector('button[type="submit"]');
+      submit.disabled = false;
+      submit.textContent = "Criar app OAuth";
+    }
+  });
+
+  developerAppsList?.addEventListener("click", async (event) => {
+    const copyButton = event.target.closest("[data-copy-value]");
+    const revokeButton = event.target.closest("[data-revoke-client]");
+
+    if (copyButton) {
+      await navigator.clipboard.writeText(copyButton.dataset.copyValue);
+      showToast("Copiado.");
+      return;
+    }
+
+    if (revokeButton) {
+      const clientId = revokeButton.dataset.revokeClient;
+      const ok = confirm("Revogar este app OAuth? Integrações usando esse client_id vão parar de funcionar.");
+      if (!ok) return;
+
+      try {
+        revokeButton.disabled = true;
+        await api(`/api/developer/oauth/apps/${encodeURIComponent(clientId)}`, {
+          method: "DELETE"
+        });
+        showToast("App revogado.");
+        await loadDeveloperApps();
+      } catch (error) {
+        showToast(error.payload?.message || error.message);
+      } finally {
+        revokeButton.disabled = false;
+      }
+    }
   });
 
   profileForm.addEventListener("submit", async (event) => {
