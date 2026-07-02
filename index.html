@@ -948,11 +948,29 @@
       letter-spacing: -0.02em;
     }
 
+    .signin-preview.dark-site {
+      background: #f5f5f7;
+      color: #050507;
+    }
+
+    .signin-preview.light-site {
+      background: #050507;
+      color: #f5f5f7;
+    }
+
     .signin-preview .mark {
       width: 26px;
       height: 26px;
       border-radius: 9px;
       margin: 0;
+    }
+
+    .signin-preview-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex: 0 0 auto;
     }
 
     .app-credential-row {
@@ -971,6 +989,11 @@
       border: 1px solid var(--line);
       overflow-wrap: anywhere;
       font-size: 12px;
+    }
+
+    .masked-credential {
+      letter-spacing: .12em;
+      user-select: none;
     }
 
     .mfa-gate {
@@ -1538,17 +1561,22 @@
               <div class="setting-row">
                 <div>
                   <h3>Preview do botão</h3>
-                  <p>Este é o botão que o dev coloca no próprio site. O backend exige Authorization Code Flow com PKCE.</p>
+                  <p>Copie o botão completo. Ele usa PKCE no JavaScript e guarda client_id/client_secret fora do HTML.</p>
                 </div>
               </div>
 
-              <button class="signin-preview" type="button" data-toast="Crie um app para gerar client_id, client_secret e URL de autorização.">
-                <span class="mark"></span>
+              <button class="signin-preview dark-site" type="button" data-toast="Use esta variante em sites escuros.">
+                <img class="signin-preview-logo" src="https://myaccount.lukintosh.com/Lukintosh_white_logo.png" alt="">
                 Entrar com Lukintosh
               </button>
 
-              <div class="code-box" id="signinSnippet">&lt;button&gt;Entrar com Lukintosh&lt;/button&gt;</div>
-              <button class="btn" id="copySigninSnippetButton" type="button">Copiar exemplo</button>
+              <button class="signin-preview light-site" type="button" data-toast="Use esta variante em sites claros.">
+                <img class="signin-preview-logo" src="https://myaccount.lukintosh.com/Lukintosh_black_logo.png" alt="">
+                Entrar com Lukintosh
+              </button>
+
+              <div class="code-box" id="signinSnippet">&lt;button class="lukintosh-signin"&gt;Entrar com Lukintosh&lt;/button&gt;</div>
+              <button class="btn" id="copySigninSnippetButton" type="button">Copiar botão com CSS</button>
             </aside>
           </div>
 
@@ -1589,7 +1617,9 @@
     pendingEmailChallenge: null,
     pendingEmailForCode: null,
     developerApps: [],
-    signinSnippet: ""
+    signinSnippet: "",
+    lastCreatedClientId: "",
+    lastCreatedClientSecret: ""
   };
 
   const loadingScreen = document.querySelector("#loadingScreen");
@@ -1969,7 +1999,7 @@
     const scopes = app?.allowedScopes?.length ? app.allowedScopes.join(" ") : "openid profile email";
     const url = new URL(`${API_BASE}/oauth/authorize`);
 
-    url.searchParams.set("client_id", app?.clientId || "SEU_CLIENT_ID");
+    url.searchParams.set("client_id", "CLIENT_ID_DO_SEU_BACKEND");
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", scopes);
@@ -1981,9 +2011,112 @@
   }
 
   function buildSigninSnippet(app = null) {
-    return `<a class="lukintosh-signin" href="${buildAuthorizeUrl(app)}">
+    const redirectUri = app?.redirectUris?.[0] || "https://example.com/auth/lukintosh/callback";
+    const scopes = app?.allowedScopes?.length ? app.allowedScopes.join(" ") : "openid profile email";
+
+    return `<style>
+  .lukintosh-signin {
+    --lukintosh-button-bg: #f5f5f7;
+    --lukintosh-button-fg: #050507;
+    --lukintosh-button-border: rgba(0,0,0,.12);
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 1px solid var(--lukintosh-button-border);
+    background: var(--lukintosh-button-bg);
+    color: var(--lukintosh-button-fg);
+    font: 800 15px/1.1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .lukintosh-signin[data-theme="light-site"] {
+    --lukintosh-button-bg: #050507;
+    --lukintosh-button-fg: #f5f5f7;
+    --lukintosh-button-border: rgba(255,255,255,.18);
+  }
+
+  .lukintosh-signin__logo {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+</style>
+
+<button
+  class="lukintosh-signin"
+  data-theme="dark-site"
+  data-lukintosh-redirect-uri="${escapeHtml(redirectUri)}"
+  data-lukintosh-scope="${escapeHtml(scopes)}"
+  type="button"
+>
+  <img
+    class="lukintosh-signin__logo"
+    src="https://myaccount.lukintosh.com/Lukintosh_white_logo.png"
+    data-logo-dark-site="https://myaccount.lukintosh.com/Lukintosh_white_logo.png"
+    data-logo-light-site="https://myaccount.lukintosh.com/Lukintosh_black_logo.png"
+    alt=""
+  >
   Entrar com Lukintosh
-</a>`;
+</button>
+
+<script>
+  const LUKINTOSH_AUTH_URL = "https://auth.lukintosh.com/oauth/authorize";
+  const LUKINTOSH_CLIENT_ID = window.LUKINTOSH_CLIENT_ID || "CLIENT_ID_DO_SEU_BACKEND";
+
+  async function lukintoshPkceChallenge(verifier) {
+    const bytes = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\\+/g, "-")
+      .replace(/\\//g, "_")
+      .replace(/=+$/, "");
+  }
+
+  function lukintoshRandomValue() {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return btoa(String.fromCharCode(...bytes))
+      .replace(/\\+/g, "-")
+      .replace(/\\//g, "_")
+      .replace(/=+$/, "");
+  }
+
+  document.querySelectorAll(".lukintosh-signin").forEach((button) => {
+    const logo = button.querySelector(".lukintosh-signin__logo");
+    const theme = button.dataset.theme || "dark-site";
+
+    if (logo) {
+      logo.src = theme === "light-site"
+        ? logo.dataset.logoLightSite
+        : logo.dataset.logoDarkSite;
+    }
+
+    button.addEventListener("click", async () => {
+      const codeVerifier = lukintoshRandomValue();
+      const state = lukintoshRandomValue();
+
+      sessionStorage.setItem("lukintosh_code_verifier", codeVerifier);
+      sessionStorage.setItem("lukintosh_oauth_state", state);
+
+      const url = new URL(LUKINTOSH_AUTH_URL);
+      url.searchParams.set("client_id", LUKINTOSH_CLIENT_ID);
+      url.searchParams.set("redirect_uri", button.dataset.lukintoshRedirectUri);
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("scope", button.dataset.lukintoshScope || "openid profile email");
+      url.searchParams.set("state", state);
+      url.searchParams.set("code_challenge", await lukintoshPkceChallenge(codeVerifier));
+      url.searchParams.set("code_challenge_method", "S256");
+
+      window.location.assign(url.toString());
+    });
+  });
+<\/script>`;
   }
 
   function updateSigninSnippet(app = null) {
@@ -2012,23 +2145,23 @@
 
     updateSigninSnippet(apps[0]);
 
-    developerAppsList.innerHTML = apps.map((app) => `
+    developerAppsList.innerHTML = apps.map((app, index) => `
       <div class="setting-row">
         <div>
           <h3>${escapeHtml(app.name || "App OAuth")}</h3>
           <p>${escapeHtml((app.redirectUris || [])[0] || "Callback não definido")}</p>
 
           <div class="app-credential-row">
-            <code>${escapeHtml(app.clientId)}</code>
-            <button class="btn" type="button" data-copy-value="${escapeHtml(app.clientId)}">Copiar client_id</button>
+            <code class="masked-credential">••••••••••••••••••••••••</code>
+            <button class="btn" type="button" data-copy-client-index="${index}">Copiar client_id</button>
           </div>
 
-          <div class="code-box">${escapeHtml(buildAuthorizeUrl(app))}</div>
+          <div class="code-box">${escapeHtml(buildSigninSnippet(app))}</div>
         </div>
 
         <div style="display:grid; gap:10px; justify-items:end;">
           <span class="tag ${app.isActive ? "" : "red"}">${app.isActive ? "Ativo" : "Revogado"}</span>
-          <button class="btn red protected-action" type="button" data-revoke-client="${escapeHtml(app.clientId)}">Revogar</button>
+          <button class="btn red protected-action" type="button" data-revoke-client-index="${index}">Revogar</button>
         </div>
       </div>
     `).join("");
@@ -2386,6 +2519,20 @@
     showToast("Exemplo do botão copiado.");
   });
 
+  createdAppCredentials?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-copy-created]");
+    if (!button) return;
+
+    const value = button.dataset.copyCreated === "client_secret"
+      ? state.lastCreatedClientSecret
+      : state.lastCreatedClientId;
+
+    if (!value) return showToast("Credencial indisponível.");
+
+    await navigator.clipboard.writeText(value);
+    showToast("Credencial copiada.");
+  });
+
   developerAppForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -2411,13 +2558,19 @@
       const app = data.app;
 
       if (createdAppCredentials && app) {
+        state.lastCreatedClientId = app.clientId || "";
+        state.lastCreatedClientSecret = app.clientSecret || "";
         createdAppCredentials.classList.remove("hidden");
         createdAppCredentials.innerHTML = `
-Client ID:
-${escapeHtml(app.clientId)}
+<div class="app-credential-row">
+  <code class="masked-credential">••••••••••••••••••••••••</code>
+  <button class="btn" type="button" data-copy-created="client_id">Copiar client_id</button>
+</div>
 
-Client Secret:
-${escapeHtml(app.clientSecret)}
+<div class="app-credential-row">
+  <code class="masked-credential">••••••••••••••••••••••••</code>
+  <button class="btn" type="button" data-copy-created="client_secret">Copiar client_secret</button>
+</div>
 
 Guarde o client_secret agora. Ele não será mostrado novamente.`;
       }
@@ -2438,17 +2591,23 @@ Guarde o client_secret agora. Ele não será mostrado novamente.`;
   });
 
   developerAppsList?.addEventListener("click", async (event) => {
-    const copyButton = event.target.closest("[data-copy-value]");
-    const revokeButton = event.target.closest("[data-revoke-client]");
+    const copyButton = event.target.closest("[data-copy-client-index]");
+    const revokeButton = event.target.closest("[data-revoke-client-index]");
 
     if (copyButton) {
-      await navigator.clipboard.writeText(copyButton.dataset.copyValue);
+      const app = state.developerApps[Number(copyButton.dataset.copyClientIndex)];
+      if (!app?.clientId) return showToast("client_id indisponível.");
+
+      await navigator.clipboard.writeText(app.clientId);
       showToast("Copiado.");
       return;
     }
 
     if (revokeButton) {
-      const clientId = revokeButton.dataset.revokeClient;
+      const app = state.developerApps[Number(revokeButton.dataset.revokeClientIndex)];
+      const clientId = app?.clientId;
+      if (!clientId) return showToast("client_id indisponível.");
+
       const ok = confirm("Revogar este app OAuth? Integrações usando esse client_id vão parar de funcionar.");
       if (!ok) return;
 
