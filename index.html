@@ -1879,6 +1879,8 @@
     identityVerification: null,
     identityVerifications: { face: null, document: null },
     identityEnabled: false,
+    faceIdentityEnabled: false,
+    documentIdentityEnabled: false,
     currentMfaFactorId: null,
     currentVerifiedMfaFactorId: null,
     pendingEmailChallenge: null,
@@ -2328,11 +2330,11 @@
     }
 
     if (startIdentityButton) {
-      startIdentityButton.disabled = !state.identityEnabled || isVerified;
+      startIdentityButton.disabled = !state.faceIdentityEnabled || isVerified;
       startIdentityButton.textContent = isPending ? "Continuar rosto" : "Verificar rosto";
     }
     if (startDocumentIdentityButton) {
-      startDocumentIdentityButton.disabled = !state.identityEnabled || documentIdentity.verified;
+      startDocumentIdentityButton.disabled = !state.documentIdentityEnabled || documentIdentity.verified;
       startDocumentIdentityButton.textContent = ["requires_input", "processing"].includes(documentIdentity.status)
         ? "Continuar documento"
         : "Verificar documento";
@@ -2679,7 +2681,9 @@
         api("/api/identity/status?type=face"),
         api("/api/identity/status?type=document")
       ]);
-      state.identityEnabled = Boolean(faceData.enabled || documentData.enabled);
+      state.faceIdentityEnabled = Boolean(faceData.enabled);
+      state.documentIdentityEnabled = Boolean(documentData.enabled);
+      state.identityEnabled = state.faceIdentityEnabled || state.documentIdentityEnabled;
       state.identityVerification = faceData.identityVerification || null;
       state.identityVerifications = {
         face: faceData.identityVerification || null,
