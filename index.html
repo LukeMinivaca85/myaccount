@@ -1627,7 +1627,9 @@
 
               <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
                 <span class="tag yellow" id="identityBadge">Identity: Loading</span>
-                <button class="btn primary protected-action" id="startIdentityButton" type="button">Verificar por vídeo</button>
+                <span class="tag" id="documentIdentityBadge">Documento: Não iniciada</span>
+                <button class="btn primary protected-action" id="startIdentityButton" type="button">Verificar rosto</button>
+                <button class="btn protected-action" id="startDocumentIdentityButton" type="button">Verificar documento</button>
                 <button class="btn" id="refreshIdentityButton" type="button">Atualizar status</button>
               </div>
             </div>
@@ -1875,6 +1877,7 @@
     sessions: [],
     mfa: null,
     identityVerification: null,
+    identityVerifications: { face: null, document: null },
     identityEnabled: false,
     currentMfaFactorId: null,
     currentVerifiedMfaFactorId: null,
@@ -1920,6 +1923,7 @@
   const signinSnippet = document.querySelector("#signinSnippet");
   const copySigninSnippetButton = document.querySelector("#copySigninSnippetButton");
   const startIdentityButton = document.querySelector("#startIdentityButton");
+  const startDocumentIdentityButton = document.querySelector("#startDocumentIdentityButton");
   const refreshIdentityButton = document.querySelector("#refreshIdentityButton");
   const identityModal = document.querySelector("#identityModal");
   const identityCameraPreview = document.querySelector("#identityCameraPreview");
@@ -1929,6 +1933,7 @@
   const continueIdentityButton = document.querySelector("#continueIdentityButton");
   const diditVerificationFrame = document.querySelector("#diditVerificationFrame");
   let identityCameraStream = null;
+  let identityVerificationType = "face";
 
   function getStoredAccessToken() {
     return localStorage.getItem("lk_access_token") || "";
@@ -2161,6 +2166,11 @@
   }
 
   function buildAccountFromUser(user, mfa = null) {
+    const faceVerified = Boolean(
+      user?.identityVerification?.verified &&
+      (user.identityVerification.type || "face") === "face"
+    );
+
     return {
       verified: Boolean(user?.emailConfirmedAt),
       provider: user?.provider || "email",
@@ -2172,12 +2182,12 @@
       devices: 1,
       securityChecks: {
         emailVerified: Boolean(user?.emailConfirmedAt),
-        identityVerified: Boolean(user?.identityVerification?.verified),
+        identityVerified: faceVerified,
         mfaEnabled: Boolean(mfa?.enabled),
         sessionActive: true,
         hasDeviceRecord: true
       },
-      securityScore: mfa?.enabled && user?.identityVerification?.verified ? 100 : 80
+      securityScore: mfa?.enabled && faceVerified ? 100 : 80
     };
   }
 
@@ -2228,7 +2238,10 @@
     document.querySelector("#accountName").textContent = displayName;
     document.querySelector("#accountEmail").textContent = `${email} · Entrou com ${lastProvider}`;
 
-    const identityVerified = Boolean(account?.identityVerification?.verified);
+    const identityVerified = Boolean(
+      account?.identityVerification?.verified &&
+      (account.identityVerification.type || "face") === "face"
+    );
     ["#sidebarVerificationBadge", "#accountVerificationBadge"].forEach((selector) => {
       document.querySelector(selector)?.classList.toggle("hidden", !identityVerified);
     });
@@ -2253,7 +2266,7 @@
         ? `● ${lastProvider}`
         : "● Email pending";
 
-    verifiedBadge.classList.toggle("yellow", !account?.identityVerification?.verified);
+    verifiedBadge.classList.toggle("yellow", !identityVerified);
   }
 
   function getIdentityStatusLabel(status) {
@@ -2270,12 +2283,17 @@
   }
 
   function renderIdentity() {
-    const identity = state.identityVerification || state.account?.identityVerification || {
+    const identity = state.identityVerifications?.face || state.identityVerification || state.account?.identityVerification || {
+      status: "not_started",
+      verified: false
+    };
+    const documentIdentity = state.identityVerifications?.document || {
       status: "not_started",
       verified: false
     };
 
     const badge = document.querySelector("#identityBadge");
+    const documentBadge = document.querySelector("#documentIdentityBadge");
     const text = document.querySelector("#identityStatusText");
 
     if (!badge || !text) return;
@@ -2287,11 +2305,20 @@
     badge.textContent = `Identity: ${getIdentityStatusLabel(status)}`;
     badge.classList.toggle("yellow", !isVerified);
     badge.classList.toggle("red", status === "canceled" || status === "failed");
+    if (documentBadge) {
+      documentBadge.textContent = `Documento: ${getIdentityStatusLabel(documentIdentity.status)}`;
+      documentBadge.classList.toggle("yellow", !documentIdentity.verified);
+      documentBadge.classList.toggle("red", ["canceled", "failed"].includes(documentIdentity.status));
+    }
 
     if (!state.identityEnabled) {
       text.textContent = "Didit ainda não está configurado no backend.";
+    } else if (isVerified && documentIdentity.verified) {
+      text.textContent = "Rosto verificado e documento confirmado pelo Didit.";
     } else if (isVerified) {
-      text.textContent = "Identidade confirmada com documento, captura pela câmera e selfie.";
+      text.textContent = "Rosto verificado pelo Didit. A verificação documental é opcional e separada.";
+    } else if (documentIdentity.verified) {
+      text.textContent = "Documento confirmado pelo Didit. A verificação facial para o selinho continua separada.";
     } else if (status === "processing") {
       text.textContent = "A verificação foi enviada e está sendo processada pelo Didit.";
     } else if (status === "failed") {
@@ -2302,7 +2329,13 @@
 
     if (startIdentityButton) {
       startIdentityButton.disabled = !state.identityEnabled || isVerified;
-      startIdentityButton.textContent = isPending ? "Continuar verificação" : "Verificar por vídeo";
+      startIdentityButton.textContent = isPending ? "Continuar rosto" : "Verificar rosto";
+    }
+    if (startDocumentIdentityButton) {
+      startDocumentIdentityButton.disabled = !state.identityEnabled || documentIdentity.verified;
+      startDocumentIdentityButton.textContent = ["requires_input", "processing"].includes(documentIdentity.status)
+        ? "Continuar documento"
+        : "Verificar documento";
     }
   }
 
@@ -2642,15 +2675,25 @@
 
   async function loadIdentityStatus() {
     try {
-      const data = await api("/api/identity/status");
-      state.identityEnabled = Boolean(data.enabled);
-      state.identityVerification = data.identityVerification || null;
+      const [faceData, documentData] = await Promise.all([
+        api("/api/identity/status?type=face"),
+        api("/api/identity/status?type=document")
+      ]);
+      state.identityEnabled = Boolean(faceData.enabled || documentData.enabled);
+      state.identityVerification = faceData.identityVerification || null;
+      state.identityVerifications = {
+        face: faceData.identityVerification || null,
+        document: documentData.identityVerification || null
+      };
 
       if (state.account) {
         state.account.identityVerification = state.identityVerification;
         state.account.securityChecks = {
           ...(state.account.securityChecks || {}),
-          identityVerified: Boolean(state.identityVerification?.verified)
+          identityVerified: Boolean(
+            state.identityVerification?.verified &&
+            (state.identityVerification.type || "face") === "face"
+          )
         };
       }
 
@@ -2924,8 +2967,20 @@
     if (continueIdentityButton) continueIdentityButton.disabled = false;
   }
 
-  async function openIdentityModal() {
-    if (!identityModal) return beginIdentityVerification();
+  async function openIdentityModal(type = "face") {
+    identityVerificationType = type;
+    if (!identityModal) return beginIdentityVerification(type);
+
+    const title = document.querySelector("#identityModalTitle");
+    const description = identityModal.querySelector(".identity-modal-head p");
+    const documentStep = identityModal.querySelector(".identity-step:nth-child(2) p");
+    if (title) title.textContent = type === "document" ? "Verificação com documento" : "Verificação facial";
+    if (description) description.textContent = type === "document"
+      ? "Envie um documento válido e conclua a conferência facial."
+      : "Confirme que você é uma pessoa real com uma captura facial rápida.";
+    if (documentStep) documentStep.textContent = type === "document"
+      ? "O Didit solicitará seu documento e poderá pedir uma selfie."
+      : "Este fluxo não solicita RG; ele verifica presença e rosto.";
 
     identityModal.classList.remove("hidden");
     identityModal.setAttribute("aria-hidden", "false");
@@ -2952,23 +3007,25 @@
     }
   }
 
-  async function beginIdentityVerification() {
+  async function beginIdentityVerification(type = identityVerificationType) {
     try {
       startIdentityButton.disabled = true;
+      if (startDocumentIdentityButton) startDocumentIdentityButton.disabled = true;
       startIdentityButton.textContent = "Criando sessão...";
 
-      const data = await api("/api/identity/start", {
+      const data = await api(`/api/identity/start-${type}`, {
         method: "POST"
       });
 
       state.identityVerification = data.identityVerification || null;
+      state.identityVerifications[identityVerificationType] = data.identityVerification || null;
 
       if (state.user && data.user) {
         state.user = data.user;
       }
 
       if (state.account) {
-        state.account.identityVerification = state.identityVerification;
+        state.account.identityVerification = state.identityVerifications.face || state.identityVerification;
       }
 
       renderIdentity();
@@ -2993,11 +3050,13 @@
       if (error.message === "mfa_required") await loadMfaStatus();
     } finally {
       startIdentityButton.disabled = false;
+      if (startDocumentIdentityButton) startDocumentIdentityButton.disabled = false;
       renderIdentity();
     }
   }
 
-  startIdentityButton?.addEventListener("click", openIdentityModal);
+  startIdentityButton?.addEventListener("click", () => openIdentityModal("face"));
+  startDocumentIdentityButton?.addEventListener("click", () => openIdentityModal("document"));
   closeIdentityModalButton?.addEventListener("click", closeIdentityModal);
   cancelIdentityModalButton?.addEventListener("click", closeIdentityModal);
   continueIdentityButton?.addEventListener("click", async () => {
