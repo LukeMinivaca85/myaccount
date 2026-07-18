@@ -7,6 +7,7 @@
   <title>Lukintosh Accounts</title>
   <meta name="description" content="Lukintosh Accounts — secure sign-in, account access, sessions, devices and identity settings for Lukintosh services." />
   <meta name="theme-color" content="#050507" />
+  <script src="https://js.stripe.com/v3/"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1420,6 +1421,21 @@
           <div class="settings" style="margin-top: 14px;">
             <div class="setting-row">
               <div>
+                <h3>Verificação por vídeo</h3>
+                <p id="identityStatusText">Verifique sua identidade com documento, captura pela câmera e selfie pelo Stripe Identity.</p>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                <span class="tag yellow" id="identityBadge">Identity: Loading</span>
+                <button class="btn primary protected-action" id="startIdentityButton" type="button">Verificar por vídeo</button>
+                <button class="btn" id="refreshIdentityButton" type="button">Atualizar status</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings" style="margin-top: 14px;">
+            <div class="setting-row">
+              <div>
                 <h3>Two-Factor Authentication</h3>
                 <p id="mfaStatusText">Carregando status do 2FA...</p>
               </div>
@@ -1612,6 +1628,9 @@
     account: null,
     sessions: [],
     mfa: null,
+    identityVerification: null,
+    identityEnabled: false,
+    stripePublishableKey: "",
     currentMfaFactorId: null,
     currentVerifiedMfaFactorId: null,
     pendingEmailChallenge: null,
@@ -1655,6 +1674,8 @@
   const createdAppCredentials = document.querySelector("#createdAppCredentials");
   const signinSnippet = document.querySelector("#signinSnippet");
   const copySigninSnippetButton = document.querySelector("#copySigninSnippetButton");
+  const startIdentityButton = document.querySelector("#startIdentityButton");
+  const refreshIdentityButton = document.querySelector("#refreshIdentityButton");
 
   function getStoredAccessToken() {
     return localStorage.getItem("lk_access_token") || "";
@@ -1736,6 +1757,14 @@
 
     if (text.toLowerCase().includes("developer_app_create_failed")) {
       return "Não consegui criar o app OAuth. Rode a SQL de apps OAuth no Supabase e tente de novo.";
+    }
+
+    if (text.toLowerCase().includes("stripe_identity_not_configured")) {
+      return "Stripe Identity ainda não está configurado no backend. Configure STRIPE_SECRET_KEY e publique novamente.";
+    }
+
+    if (text.toLowerCase().includes("supabase_service_role_required")) {
+      return "O backend precisa da SUPABASE_SERVICE_ROLE_KEY para salvar o status da verificação.";
     }
 
     return text;
@@ -1884,16 +1913,18 @@
       provider: user?.provider || "email",
       providers: user?.providers || [],
       mfa,
+      identityVerification: user?.identityVerification || null,
       twoFactorEnabled: Boolean(mfa?.enabled),
       activeSessions: 1,
       devices: 1,
       securityChecks: {
         emailVerified: Boolean(user?.emailConfirmedAt),
+        identityVerified: Boolean(user?.identityVerification?.verified),
         mfaEnabled: Boolean(mfa?.enabled),
         sessionActive: true,
         hasDeviceRecord: true
       },
-      securityScore: mfa?.enabled ? 100 : 75
+      securityScore: mfa?.enabled && user?.identityVerification?.verified ? 100 : 80
     };
   }
 
@@ -1902,12 +1933,15 @@
 
     state.user = data.user;
     state.mfa = data.mfa || null;
+    state.identityVerification = data.user?.identityVerification || null;
     state.account = buildAccountFromUser(data.user, data.mfa || null);
     state.sessions = [];
 
     renderAccount();
+    renderIdentity();
     renderSessions();
     renderMfa();
+    loadIdentityStatus();
     loadDeveloperApps();
 
     if (shouldShowConsent()) {
@@ -1955,11 +1989,63 @@
 
     const verifiedBadge = document.querySelector("#verifiedBadge");
 
-    verifiedBadge.textContent = account?.verified
-      ? `● ${lastProvider}`
-      : "● Email pending";
+    verifiedBadge.textContent = account?.identityVerification?.verified
+      ? "● Identity verified"
+      : account?.verified
+        ? `● ${lastProvider}`
+        : "● Email pending";
 
-    verifiedBadge.classList.toggle("yellow", !account?.verified);
+    verifiedBadge.classList.toggle("yellow", !account?.identityVerification?.verified);
+  }
+
+  function getIdentityStatusLabel(status) {
+    const labels = {
+      not_started: "Não iniciada",
+      requires_input: "Aguardando envio",
+      processing: "Processando",
+      verified: "Verificada",
+      canceled: "Cancelada",
+      failed: "Falhou"
+    };
+
+    return labels[status] || status || "Não iniciada";
+  }
+
+  function renderIdentity() {
+    const identity = state.identityVerification || state.account?.identityVerification || {
+      status: "not_started",
+      verified: false
+    };
+
+    const badge = document.querySelector("#identityBadge");
+    const text = document.querySelector("#identityStatusText");
+
+    if (!badge || !text) return;
+
+    const status = identity.status || "not_started";
+    const isVerified = Boolean(identity.verified || status === "verified");
+    const isPending = ["requires_input", "processing"].includes(status);
+
+    badge.textContent = `Identity: ${getIdentityStatusLabel(status)}`;
+    badge.classList.toggle("yellow", !isVerified);
+    badge.classList.toggle("red", status === "canceled" || status === "failed");
+
+    if (!state.identityEnabled) {
+      text.textContent = "Stripe Identity ainda não está configurado no backend.";
+    } else if (isVerified) {
+      text.textContent = "Identidade confirmada com documento, captura pela câmera e selfie.";
+    } else if (status === "processing") {
+      text.textContent = "A verificação foi enviada e está sendo processada pelo Stripe.";
+    } else if (status === "failed") {
+      text.textContent = "A verificação não foi concluída. Inicie uma nova tentativa pelo Stripe.";
+    } else {
+      text.textContent = "Verifique sua identidade com documento, captura pela câmera e selfie pelo Stripe Identity.";
+    }
+
+    if (startIdentityButton) {
+      startIdentityButton.disabled = !state.identityEnabled || isVerified;
+      startIdentityButton.textContent = isPending ? "Continuar verificação" : "Verificar por vídeo";
+    }
   }
 
   function renderSessions() {
@@ -2296,6 +2382,38 @@
     }
   }
 
+  async function loadIdentityStatus() {
+    try {
+      const data = await api("/api/identity/status");
+      state.identityEnabled = Boolean(data.enabled);
+      state.stripePublishableKey = data.publishableKey || "";
+      state.identityVerification = data.identityVerification || null;
+
+      if (state.account) {
+        state.account.identityVerification = state.identityVerification;
+        state.account.securityChecks = {
+          ...(state.account.securityChecks || {}),
+          identityVerified: Boolean(state.identityVerification?.verified)
+        };
+      }
+
+      if (state.user) {
+        state.user.identityVerification = state.identityVerification;
+      }
+
+      renderIdentity();
+      renderAccount();
+
+      return data;
+    } catch (error) {
+      state.identityEnabled = false;
+      state.stripePublishableKey = "";
+      renderIdentity();
+      console.warn("Identity status failed:", error.message);
+      return null;
+    }
+  }
+
   async function loadAccount() {
     showLoading();
 
@@ -2306,10 +2424,18 @@
 
       state.user = me.user;
       state.mfa = me.mfa || status.account?.mfa || null;
+      state.identityVerification =
+        status.account?.identityVerification || me.user?.identityVerification || null;
       state.account = status.account || buildAccountFromUser(me.user, state.mfa);
       state.sessions = sessions.sessions || [];
 
+      if (state.account) {
+        state.account.identityVerification = state.identityVerification;
+      }
+
+      await loadIdentityStatus();
       renderAccount();
+      renderIdentity();
       renderSessions();
       renderMfa();
       await loadDeveloperApps();
@@ -2324,6 +2450,9 @@
       state.account = null;
       state.sessions = [];
       state.mfa = null;
+      state.identityVerification = null;
+      state.identityEnabled = false;
+      state.stripePublishableKey = "";
       showAuth();
     }
   }
@@ -2334,6 +2463,11 @@
 
     if (error) {
       showToast(error);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (params.get("identity") === "return") {
+      showToast("Voltamos do Stripe. Atualizando status da verificação...");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
@@ -2517,6 +2651,65 @@
     updateSigninSnippet(state.developerApps?.[0] || null);
     await navigator.clipboard.writeText(state.signinSnippet);
     showToast("Exemplo do botão copiado.");
+  });
+
+  startIdentityButton?.addEventListener("click", async () => {
+    try {
+      startIdentityButton.disabled = true;
+      startIdentityButton.textContent = "Criando sessão...";
+
+      const data = await api("/api/identity/start", {
+        method: "POST"
+      });
+
+      state.identityVerification = data.identityVerification || null;
+
+      if (state.user && data.user) {
+        state.user = data.user;
+      }
+
+      if (state.account) {
+        state.account.identityVerification = state.identityVerification;
+      }
+
+      renderIdentity();
+      renderAccount();
+
+      if (data.clientSecret && (state.stripePublishableKey || data.publishableKey)) {
+        if (typeof window.Stripe !== "function") {
+          throw new Error("Stripe.js não carregou. Atualize a página e tente novamente.");
+        }
+
+        const stripe = window.Stripe(
+          state.stripePublishableKey || data.publishableKey
+        );
+        const result = await stripe.verifyIdentity(data.clientSecret);
+
+        if (result.error) throw new Error(result.error.message);
+
+        await loadIdentityStatus();
+        showToast("Verificação enviada. O Stripe está processando o resultado.");
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      showToast("Sessão de verificação criada, mas o Stripe não retornou uma URL.");
+    } catch (error) {
+      showToast(error.message);
+      if (error.message === "mfa_required") await loadMfaStatus();
+    } finally {
+      startIdentityButton.disabled = false;
+      renderIdentity();
+    }
+  });
+
+  refreshIdentityButton?.addEventListener("click", async () => {
+    await loadIdentityStatus();
+    showToast("Status da identidade atualizado.");
   });
 
   createdAppCredentials?.addEventListener("click", async (event) => {
