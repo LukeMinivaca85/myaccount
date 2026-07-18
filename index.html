@@ -2020,7 +2020,23 @@
     }
 
     if (text.toLowerCase().includes("didit_identity_not_configured")) {
-      return "Didit ainda não está configurado no backend. Configure DIDIT_API_KEY, DIDIT_WORKFLOW_ID e DIDIT_WEBHOOK_SECRET e publique novamente.";
+      return "Didit ainda não está configurado no backend. Configure a chave e o workflow correspondente e publique novamente.";
+    }
+
+    if (text.toLowerCase().includes("invalid workflow_id")) {
+      return "O Workflow ID documental do Didit é inválido ou não pertence a esta aplicação. Confira o UUID no painel do Didit.";
+    }
+
+    if (text.toLowerCase().includes("permission") || text.toLowerCase().includes("write:sessions")) {
+      return "A chave do Didit não tem permissão para criar sessões. Gere uma chave com acesso de criação de sessões.";
+    }
+
+    if (text.toLowerCase().includes("enough credits") || text.toLowerCase().includes("top up")) {
+      return "O Didit informou que não há créditos disponíveis para criar esta sessão.";
+    }
+
+    if (text.toLowerCase().includes("didit_session_creation_failed")) {
+      return "O Didit não conseguiu criar a sessão. Confira o Workflow ID, a chave e as permissões no backend.";
     }
 
     if (text.toLowerCase().includes("supabase_service_role_required")) {
@@ -2980,11 +2996,19 @@
     const documentStep = identityModal.querySelector(".identity-step:nth-child(2) p");
     if (title) title.textContent = type === "document" ? "Verificação com documento" : "Verificação facial";
     if (description) description.textContent = type === "document"
-      ? "Envie um documento válido e conclua a conferência facial."
+      ? "Você vai verificar seu documento por meio de um fluxo externo seguro."
       : "Confirme que você é uma pessoa real com uma captura facial rápida.";
     if (documentStep) documentStep.textContent = type === "document"
-      ? "O Didit solicitará seu documento e poderá pedir uma selfie."
+      ? "Mostre à câmera um documento oficial válido."
       : "Este fluxo não solicita RG; ele verifica presença e rosto.";
+    const documentStepTitle = identityModal.querySelector(".identity-step:nth-child(2) h3");
+    const reasonStepTitle = identityModal.querySelector(".identity-step:nth-child(3) h3");
+    const reasonStep = identityModal.querySelector(".identity-step:nth-child(3) p");
+    if (documentStepTitle) documentStepTitle.textContent = type === "document" ? "Mostre seu documento" : "Sem documento neste fluxo";
+    if (reasonStepTitle) reasonStepTitle.textContent = type === "document" ? "Por que usamos isso?" : "Continue no fluxo seguro";
+    if (reasonStep) reasonStep.textContent = type === "document"
+      ? "Para cumprir requisitos legais aplicáveis e ajudar a manter sua conta segura."
+      : "A captura e a análise acontecem no fluxo seguro de verificação.";
 
     identityModal.classList.remove("hidden");
     identityModal.setAttribute("aria-hidden", "false");
