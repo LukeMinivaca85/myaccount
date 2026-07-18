@@ -1628,8 +1628,12 @@
               <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
                 <span class="tag yellow" id="identityBadge">Identity: Loading</span>
                 <span class="tag" id="documentIdentityBadge">Documento: Não iniciada</span>
+                <span class="tag" id="ageIdentityBadge">Idade: Não iniciada</span>
+                <span class="tag" id="adaptiveAgeIdentityBadge">Idade adaptativa: Não iniciada</span>
                 <button class="btn primary protected-action" id="startIdentityButton" type="button">Verificar rosto</button>
                 <button class="btn protected-action" id="startDocumentIdentityButton" type="button">Verificar documento</button>
+                <button class="btn protected-action" id="startAgeIdentityButton" type="button">Estimar idade</button>
+                <button class="btn protected-action" id="startAdaptiveAgeIdentityButton" type="button">Verificação adaptativa</button>
                 <button class="btn" id="refreshIdentityButton" type="button">Atualizar status</button>
               </div>
             </div>
@@ -1869,10 +1873,12 @@
     sessions: [],
     mfa: null,
     identityVerification: null,
-    identityVerifications: { face: null, document: null },
+    identityVerifications: { face: null, document: null, age: null, adaptive_age: null },
     identityEnabled: false,
     faceIdentityEnabled: false,
     documentIdentityEnabled: false,
+    ageIdentityEnabled: false,
+    adaptiveAgeIdentityEnabled: false,
     currentMfaFactorId: null,
     currentVerifiedMfaFactorId: null,
     pendingEmailChallenge: null,
@@ -1918,6 +1924,8 @@
   const copySigninSnippetButton = document.querySelector("#copySigninSnippetButton");
   const startIdentityButton = document.querySelector("#startIdentityButton");
   const startDocumentIdentityButton = document.querySelector("#startDocumentIdentityButton");
+  const startAgeIdentityButton = document.querySelector("#startAgeIdentityButton");
+  const startAdaptiveAgeIdentityButton = document.querySelector("#startAdaptiveAgeIdentityButton");
   const refreshIdentityButton = document.querySelector("#refreshIdentityButton");
   const identityModal = document.querySelector("#identityModal");
   const closeIdentityModalButton = document.querySelector("#closeIdentityModalButton");
@@ -2314,9 +2322,19 @@
       status: "not_started",
       verified: false
     };
+    const ageIdentity = state.identityVerifications?.age || {
+      status: "not_started",
+      verified: false
+    };
+    const adaptiveAgeIdentity = state.identityVerifications?.adaptive_age || {
+      status: "not_started",
+      verified: false
+    };
 
     const badge = document.querySelector("#identityBadge");
     const documentBadge = document.querySelector("#documentIdentityBadge");
+    const ageBadge = document.querySelector("#ageIdentityBadge");
+    const adaptiveAgeBadge = document.querySelector("#adaptiveAgeIdentityBadge");
     const text = document.querySelector("#identityStatusText");
 
     if (!badge || !text) return;
@@ -2333,6 +2351,16 @@
       documentBadge.classList.toggle("yellow", !documentIdentity.verified);
       documentBadge.classList.toggle("red", ["canceled", "failed"].includes(documentIdentity.status));
     }
+    if (ageBadge) {
+      ageBadge.textContent = `Idade: ${getIdentityStatusLabel(ageIdentity.status)}`;
+      ageBadge.classList.toggle("yellow", !ageIdentity.verified);
+      ageBadge.classList.toggle("red", ["canceled", "failed"].includes(ageIdentity.status));
+    }
+    if (adaptiveAgeBadge) {
+      adaptiveAgeBadge.textContent = `Idade adaptativa: ${getIdentityStatusLabel(adaptiveAgeIdentity.status)}`;
+      adaptiveAgeBadge.classList.toggle("yellow", !adaptiveAgeIdentity.verified);
+      adaptiveAgeBadge.classList.toggle("red", ["canceled", "failed"].includes(adaptiveAgeIdentity.status));
+    }
 
     if (!state.identityEnabled) {
       text.textContent = "Didit ainda não está configurado no backend.";
@@ -2342,6 +2370,8 @@
       text.textContent = "Rosto verificado pelo Didit. A verificação documental é opcional e separada.";
     } else if (documentIdentity.verified) {
       text.textContent = "Documento confirmado pelo Didit. A verificação facial para o selinho continua separada.";
+    } else if (adaptiveAgeIdentity.status === "processing" || ageIdentity.status === "processing") {
+      text.textContent = "A estimativa de idade está sendo processada pelo Didit.";
     } else if (status === "processing") {
       text.textContent = "A verificação foi enviada e está sendo processada pelo Didit.";
     } else if (status === "failed") {
@@ -2359,6 +2389,18 @@
       startDocumentIdentityButton.textContent = ["requires_input", "processing"].includes(documentIdentity.status)
         ? "Continuar documento"
         : "Verificar documento";
+    }
+    if (startAgeIdentityButton) {
+      startAgeIdentityButton.disabled = !state.ageIdentityEnabled || ageIdentity.verified;
+      startAgeIdentityButton.textContent = ["requires_input", "processing"].includes(ageIdentity.status)
+        ? "Continuar idade"
+        : "Estimar idade";
+    }
+    if (startAdaptiveAgeIdentityButton) {
+      startAdaptiveAgeIdentityButton.disabled = !state.adaptiveAgeIdentityEnabled || adaptiveAgeIdentity.verified;
+      startAdaptiveAgeIdentityButton.textContent = ["requires_input", "processing"].includes(adaptiveAgeIdentity.status)
+        ? "Continuar idade adaptativa"
+        : "Verificação adaptativa";
     }
   }
 
@@ -2698,17 +2740,26 @@
 
   async function loadIdentityStatus() {
     try {
-      const [faceData, documentData] = await Promise.all([
+      const responses = await Promise.allSettled([
         api("/api/identity/status?type=face"),
-        api("/api/identity/status?type=document")
+        api("/api/identity/status?type=document"),
+        api("/api/identity/status?type=age"),
+        api("/api/identity/status?type=adaptive_age")
       ]);
+      const [faceData, documentData, ageData, adaptiveAgeData] = responses.map((result) =>
+        result.status === "fulfilled" ? result.value : { enabled: false, identityVerification: null }
+      );
       state.faceIdentityEnabled = Boolean(faceData.enabled);
       state.documentIdentityEnabled = Boolean(documentData.enabled);
-      state.identityEnabled = state.faceIdentityEnabled || state.documentIdentityEnabled;
+      state.ageIdentityEnabled = Boolean(ageData.enabled);
+      state.adaptiveAgeIdentityEnabled = Boolean(adaptiveAgeData.enabled);
+      state.identityEnabled = state.faceIdentityEnabled || state.documentIdentityEnabled || state.ageIdentityEnabled || state.adaptiveAgeIdentityEnabled;
       state.identityVerification = faceData.identityVerification || null;
       state.identityVerifications = {
         face: faceData.identityVerification || null,
-        document: documentData.identityVerification || null
+        document: documentData.identityVerification || null,
+        age: ageData.identityVerification || null,
+        adaptive_age: adaptiveAgeData.identityVerification || null
       };
 
       if (state.account) {
@@ -2729,7 +2780,7 @@
       renderIdentity();
       renderAccount();
 
-      return data;
+      return state.identityVerifications;
     } catch (error) {
       state.identityEnabled = false;
       renderIdentity();
@@ -2994,23 +3045,40 @@
     const firstStepTitle = identityModal.querySelector(".identity-step:nth-child(1) h3");
     const firstStep = identityModal.querySelector(".identity-step:nth-child(1) p");
     const documentStep = identityModal.querySelector(".identity-step:nth-child(2) p");
-    if (title) title.textContent = type === "document" ? "Verificação com documento" : "Verificação facial";
-    if (description) description.textContent = type === "document"
+    const isDocument = type === "document";
+    const isAge = type === "age";
+    const isAdaptiveAge = type === "adaptive_age";
+    if (title) title.textContent = isDocument
+      ? "Verificação com documento"
+      : isAge
+        ? "Estimativa de idade"
+        : isAdaptiveAge
+          ? "Estimativa de idade adaptativa"
+          : "Verificação facial";
+    if (description) description.textContent = isDocument
       ? "Você vai verificar seu documento por meio de um fluxo externo seguro."
-      : "Confirme que você é uma pessoa real com uma captura facial rápida.";
-    if (documentStep) documentStep.textContent = type === "document"
+      : isAge
+        ? "O Didit fará uma estimativa de idade pelo fluxo seguro de verificação."
+        : isAdaptiveAge
+          ? "O fluxo começa com estimativa de idade e pode solicitar documento se necessário."
+          : "Confirme que você é uma pessoa real com uma captura facial rápida.";
+    if (documentStep) documentStep.textContent = isDocument
       ? "Mostre à câmera um documento oficial válido."
-      : "Este fluxo não solicita RG; ele verifica presença e rosto.";
+      : isAge
+        ? "Siga as instruções do Didit para a estimativa."
+        : isAdaptiveAge
+          ? "Tenha um documento oficial em mãos caso o fluxo solicite uma confirmação adicional."
+          : "Este fluxo não solicita RG; ele verifica presença e rosto.";
     const documentStepTitle = identityModal.querySelector(".identity-step:nth-child(2) h3");
     const reasonStepTitle = identityModal.querySelector(".identity-step:nth-child(3) h3");
     const reasonStep = identityModal.querySelector(".identity-step:nth-child(3) p");
-    if (documentStepTitle) documentStepTitle.textContent = type === "document" ? "Mostre seu documento" : "Sem documento neste fluxo";
-    if (reasonStepTitle) reasonStepTitle.textContent = type === "document" ? "Por que usamos isso?" : "Continue no fluxo seguro";
-    if (reasonStep) reasonStep.textContent = type === "document"
+    if (documentStepTitle) documentStepTitle.textContent = isDocument ? "Mostre seu documento" : isAdaptiveAge ? "Documento se necessário" : "Sem documento neste fluxo";
+    if (reasonStepTitle) reasonStepTitle.textContent = isDocument || isAdaptiveAge ? "Por que usamos isso?" : "Continue no fluxo seguro";
+    if (reasonStep) reasonStep.textContent = isDocument || isAdaptiveAge
       ? "Para cumprir requisitos legais aplicáveis e ajudar a manter sua conta segura."
       : "A captura e a análise acontecem no fluxo seguro de verificação.";
-    if (firstStepTitle) firstStepTitle.textContent = type === "document" ? "Prepare seu documento" : "Tenha luz no rosto";
-    if (firstStep) firstStep.textContent = type === "document"
+    if (firstStepTitle) firstStepTitle.textContent = isDocument ? "Prepare seu documento" : "Tenha luz no rosto";
+    if (firstStep) firstStep.textContent = isDocument
       ? "Tenha o documento oficial em mãos e siga as instruções exibidas no fluxo seguro."
       : "Fique em um lugar iluminado e sem outra pessoa no quadro.";
 
@@ -3020,11 +3088,20 @@
 
   async function beginIdentityVerification(type = identityVerificationType) {
     try {
-      startIdentityButton.disabled = true;
-      if (startDocumentIdentityButton) startDocumentIdentityButton.disabled = true;
-      startIdentityButton.textContent = "Criando sessão...";
+      const buttons = {
+        face: startIdentityButton,
+        document: startDocumentIdentityButton,
+        age: startAgeIdentityButton,
+        adaptive_age: startAdaptiveAgeIdentityButton
+      };
+      const activeButton = buttons[type];
+      if (activeButton) {
+        activeButton.disabled = true;
+        activeButton.textContent = "Criando sessão...";
+      }
 
-      const data = await api(`/api/identity/start-${type}`, {
+      const endpointType = type === "adaptive_age" ? "adaptive-age" : type;
+      const data = await api(`/api/identity/start-${endpointType}`, {
         method: "POST"
       });
 
@@ -3059,14 +3136,14 @@
       showToast(error.message);
       if (error.message === "mfa_required") await loadMfaStatus();
     } finally {
-      startIdentityButton.disabled = false;
-      if (startDocumentIdentityButton) startDocumentIdentityButton.disabled = false;
       renderIdentity();
     }
   }
 
   startIdentityButton?.addEventListener("click", () => openIdentityModal("face"));
   startDocumentIdentityButton?.addEventListener("click", () => openIdentityModal("document"));
+  startAgeIdentityButton?.addEventListener("click", () => openIdentityModal("age"));
+  startAdaptiveAgeIdentityButton?.addEventListener("click", () => openIdentityModal("adaptive_age"));
   closeIdentityModalButton?.addEventListener("click", closeIdentityModal);
   cancelIdentityModalButton?.addEventListener("click", closeIdentityModal);
   continueIdentityButton?.addEventListener("click", async () => {
