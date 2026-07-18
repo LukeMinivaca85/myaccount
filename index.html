@@ -557,9 +557,10 @@
       display: inline-block;
       flex: 0 0 auto;
       position: relative;
-      background: linear-gradient(145deg, #f1e9ff 4%, #c7a9df 36%, #986fae 68%, #6b4e7d 100%);
-      clip-path: polygon(50% 0%, 63% 8%, 78% 5%, 86% 18%, 100% 25%, 94% 40%, 100% 54%, 88% 64%, 87% 80%, 71% 82%, 60% 96%, 46% 88%, 32% 100%, 23% 86%, 7% 83%, 10% 66%, 0% 55%, 8% 41%, 3% 26%, 18% 18%, 25% 4%, 39% 9%);
+      background: url("./taaffeite-verified-badge.png") center / cover no-repeat;
+      border-radius: 38%;
       filter: drop-shadow(0 0 5px rgba(182, 137, 204, .45));
+      mix-blend-mode: screen;
     }
 
     .identity-diamond-badge::after {
@@ -1940,6 +1941,10 @@
     return localStorage.getItem("lk_access_token") || "";
   }
 
+  function isBadgePreviewMode() {
+    return new URLSearchParams(window.location.search).get("preview") === "verified-badge";
+  }
+
   function storeSession(session) {
     if (!session?.accessToken) return;
 
@@ -2274,9 +2279,14 @@
     const identityVerified = Boolean(
       account?.identityVerification?.verified &&
       (account.identityVerification.type || "face") === "face"
-    );
+    ) || isBadgePreviewMode();
     ["#sidebarVerificationBadge", "#accountVerificationBadge"].forEach((selector) => {
-      document.querySelector(selector)?.classList.toggle("hidden", !identityVerified);
+      const badge = document.querySelector(selector);
+      badge?.classList.toggle("hidden", !identityVerified);
+      if (badge && isBadgePreviewMode()) {
+        badge.title = "Prévia do selo de taaffeíta para testes";
+        badge.setAttribute("aria-label", "Prévia do selo de taaffeíta para testes");
+      }
     });
 
     renderAvatar("#sidebarInitial", user, initial);
