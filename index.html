@@ -670,6 +670,170 @@
       padding: 20px;
     }
 
+    .identity-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .identity-modal-card {
+      width: min(860px, 100%);
+      max-height: min(760px, calc(100vh - 44px));
+      overflow: auto;
+      border: 1px solid var(--line-strong);
+      border-radius: 26px;
+      background: #101014;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .identity-modal-head,
+    .identity-modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .identity-modal-head {
+      margin-bottom: 20px;
+    }
+
+    .identity-modal-head p,
+    .identity-modal-note,
+    .identity-step p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      background: rgba(255,255,255,.05);
+      font-size: 20px;
+    }
+
+    .identity-modal-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(240px, .8fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .camera-stage {
+      min-height: 360px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: #070709;
+    }
+
+    .camera-stage video {
+      width: 100%;
+      height: 100%;
+      min-height: 360px;
+      display: block;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .camera-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      text-align: center;
+      color: rgba(245,245,247,.75);
+    }
+
+    .camera-guide {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(58%, 250px);
+      aspect-ratio: 3 / 4;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255,255,255,.82);
+      border-radius: 48% 48% 42% 42%;
+      box-shadow: 0 0 0 999px rgba(0,0,0,.32);
+      pointer-events: none;
+    }
+
+    .identity-steps {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .identity-step {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.035);
+    }
+
+    .identity-step-number {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #06100a;
+      background: var(--green);
+      font-weight: 800;
+    }
+
+    .identity-modal-actions {
+      margin-top: 20px;
+    }
+
+    @media (max-width: 720px) {
+      .identity-modal {
+        padding: 10px;
+        place-items: end center;
+      }
+
+      .identity-modal-card {
+        max-height: calc(100vh - 20px);
+        padding: 18px;
+        border-radius: 22px 22px 0 0;
+      }
+
+      .identity-modal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .camera-stage,
+      .camera-stage video {
+        min-height: 260px;
+      }
+
+      .identity-modal-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+      }
+
+      .identity-modal-actions .btn {
+        width: 100%;
+      }
+    }
+
     .id-top {
       display: flex;
       justify-content: space-between;
@@ -1433,6 +1597,50 @@
             </div>
           </div>
 
+          <div class="identity-modal hidden" id="identityModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="identityModalTitle">
+            <div class="identity-modal-card">
+              <div class="identity-modal-head">
+                <div>
+                  <span class="eyebrow">Lukintosh Secure Check</span>
+                  <h2 id="identityModalTitle">Verificação por vídeo</h2>
+                  <p>Prepare-se para uma captura rápida e segura.</p>
+                </div>
+                <button class="icon-button" id="closeIdentityModalButton" type="button" aria-label="Fechar">×</button>
+              </div>
+
+              <div class="identity-modal-grid">
+                <div class="camera-stage">
+                  <video id="identityCameraPreview" autoplay muted playsinline aria-label="Prévia da câmera"></video>
+                  <div class="camera-placeholder" id="identityCameraPlaceholder">
+                    <p>Permita o acesso à câmera para conferir o enquadramento antes de continuar.</p>
+                  </div>
+                  <div class="camera-guide" aria-hidden="true"></div>
+                </div>
+
+                <div class="identity-steps">
+                  <div class="identity-step">
+                    <span class="identity-step-number">1</span>
+                    <div><h3>Tenha luz no rosto</h3><p>Fique em um lugar iluminado e sem outra pessoa no quadro.</p></div>
+                  </div>
+                  <div class="identity-step">
+                    <span class="identity-step-number">2</span>
+                    <div><h3>Use um documento válido</h3><p>O Stripe pode solicitar documento e selfie durante a verificação.</p></div>
+                  </div>
+                  <div class="identity-step">
+                    <span class="identity-step-number">3</span>
+                    <div><h3>Continue no Stripe</h3><p>A captura e a análise acontecem no ambiente oficial do Stripe Identity.</p></div>
+                  </div>
+                  <p class="identity-modal-note">A prévia não é gravada pelo My Account. O vídeo, imagens e documentos ficam sob o fluxo oficial do Stripe.</p>
+                </div>
+              </div>
+
+              <div class="identity-modal-actions">
+                <button class="btn" id="cancelIdentityModalButton" type="button">Agora não</button>
+                <button class="btn primary" id="continueIdentityButton" type="button">Continuar para o Stripe</button>
+              </div>
+            </div>
+          </div>
+
           <div class="settings" style="margin-top: 14px;">
             <div class="setting-row">
               <div>
@@ -1676,6 +1884,13 @@
   const copySigninSnippetButton = document.querySelector("#copySigninSnippetButton");
   const startIdentityButton = document.querySelector("#startIdentityButton");
   const refreshIdentityButton = document.querySelector("#refreshIdentityButton");
+  const identityModal = document.querySelector("#identityModal");
+  const identityCameraPreview = document.querySelector("#identityCameraPreview");
+  const identityCameraPlaceholder = document.querySelector("#identityCameraPlaceholder");
+  const closeIdentityModalButton = document.querySelector("#closeIdentityModalButton");
+  const cancelIdentityModalButton = document.querySelector("#cancelIdentityModalButton");
+  const continueIdentityButton = document.querySelector("#continueIdentityButton");
+  let identityCameraStream = null;
 
   function getStoredAccessToken() {
     return localStorage.getItem("lk_access_token") || "";
@@ -2653,7 +2868,47 @@
     showToast("Exemplo do botão copiado.");
   });
 
-  startIdentityButton?.addEventListener("click", async () => {
+  function stopIdentityCamera() {
+    identityCameraStream?.getTracks().forEach((track) => track.stop());
+    identityCameraStream = null;
+    if (identityCameraPreview) identityCameraPreview.srcObject = null;
+  }
+
+  function closeIdentityModal() {
+    identityModal?.classList.add("hidden");
+    identityModal?.setAttribute("aria-hidden", "true");
+    stopIdentityCamera();
+  }
+
+  async function openIdentityModal() {
+    if (!identityModal) return beginIdentityVerification();
+
+    identityModal.classList.remove("hidden");
+    identityModal.setAttribute("aria-hidden", "false");
+    identityCameraPlaceholder?.classList.remove("hidden");
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      if (identityCameraPlaceholder) {
+        identityCameraPlaceholder.textContent = "A prévia da câmera não está disponível neste navegador. Você ainda pode continuar pelo Stripe.";
+      }
+      return;
+    }
+
+    try {
+      identityCameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      });
+      if (identityCameraPreview) identityCameraPreview.srcObject = identityCameraStream;
+      identityCameraPlaceholder?.classList.add("hidden");
+    } catch (error) {
+      if (identityCameraPlaceholder) {
+        identityCameraPlaceholder.textContent = "Não foi possível abrir a câmera. Você pode continuar e concluir a captura no Stripe.";
+      }
+    }
+  }
+
+  async function beginIdentityVerification() {
     try {
       startIdentityButton.disabled = true;
       startIdentityButton.textContent = "Criando sessão...";
@@ -2704,6 +2959,24 @@
     } finally {
       startIdentityButton.disabled = false;
       renderIdentity();
+    }
+  }
+
+  startIdentityButton?.addEventListener("click", openIdentityModal);
+  closeIdentityModalButton?.addEventListener("click", closeIdentityModal);
+  cancelIdentityModalButton?.addEventListener("click", closeIdentityModal);
+  continueIdentityButton?.addEventListener("click", async () => {
+    closeIdentityModal();
+    await beginIdentityVerification();
+  });
+
+  identityModal?.addEventListener("click", (event) => {
+    if (event.target === identityModal) closeIdentityModal();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && identityModal && !identityModal.classList.contains("hidden")) {
+      closeIdentityModal();
     }
   });
 
