@@ -2025,6 +2025,22 @@
     }
 
     if (text.toLowerCase().includes("didit_session_creation_failed")) {
+      if (text.includes("_400")) {
+        return "O Didit rejeitou os dados da sessão. Confira se o Workflow ID é o UUID correto e está ativo.";
+      }
+
+      if (text.includes("_401")) {
+        return "A chave do Didit foi recusada. Confira se DIDIT_API_KEY pertence à aplicação correta e não foi regenerada.";
+      }
+
+      if (text.includes("_403")) {
+        return "A chave do Didit não tem permissão para criar sessões. Habilite a permissão de criação de sessões.";
+      }
+
+      if (text.includes("_429")) {
+        return "O Didit limitou novas sessões temporariamente. Aguarde e tente novamente.";
+      }
+
       return "O Didit não conseguiu criar a sessão. Confira o Workflow ID, a chave e as permissões no backend.";
     }
 
