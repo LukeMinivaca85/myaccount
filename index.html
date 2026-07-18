@@ -7,7 +7,6 @@
   <title>Lukintosh Accounts</title>
   <meta name="description" content="Lukintosh Accounts — secure sign-in, account access, sessions, devices and identity settings for Lukintosh services." />
   <meta name="theme-color" content="#050507" />
-  <script src="https://cdn.veriff.me/incontext/js/v2.5.0/veriff.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -757,6 +756,15 @@
       grid-template-columns: minmax(0, 1.2fr) minmax(240px, .8fr);
       gap: 20px;
       align-items: stretch;
+    }
+
+    .didit-verification-frame {
+      width: 100%;
+      min-height: 680px;
+      display: block;
+      border: 0;
+      border-radius: 18px;
+      background: #070709;
     }
 
     .camera-stage {
@@ -1614,7 +1622,7 @@
             <div class="setting-row">
               <div>
                 <h3>Verificação por vídeo</h3>
-                <p id="identityStatusText">Verifique sua identidade com documento, captura pela câmera e selfie pelo Veriff.</p>
+                <p id="identityStatusText">Verifique sua identidade com documento, captura pela câmera e selfie pelo Didit.</p>
               </div>
 
               <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
@@ -1652,19 +1660,21 @@
                   </div>
                   <div class="identity-step">
                     <span class="identity-step-number">2</span>
-                    <div><h3>Use um documento válido</h3><p>O Veriff pode solicitar documento e selfie durante a verificação.</p></div>
+                    <div><h3>Use um documento válido</h3><p>O Didit pode solicitar documento e selfie durante a verificação.</p></div>
                   </div>
                   <div class="identity-step">
                     <span class="identity-step-number">3</span>
-                    <div><h3>Continue no Veriff</h3><p>A captura e a análise acontecem no fluxo oficial do Veriff.</p></div>
+                    <div><h3>Continue no Didit</h3><p>A captura e a análise acontecem no fluxo oficial do Didit.</p></div>
                   </div>
-                  <p class="identity-modal-note">A prévia não é gravada pelo My Account. O vídeo, imagens e documentos ficam sob o fluxo oficial do Veriff.</p>
+                  <p class="identity-modal-note">A prévia não é gravada pelo My Account. O vídeo, imagens e documentos ficam sob o fluxo oficial do Didit.</p>
                 </div>
               </div>
 
+              <iframe class="didit-verification-frame hidden" id="diditVerificationFrame" title="Verificação de identidade Didit" allow="camera; microphone; fullscreen; autoplay; encrypted-media"></iframe>
+
               <div class="identity-modal-actions">
                 <button class="btn" id="cancelIdentityModalButton" type="button">Agora não</button>
-                <button class="btn primary" id="continueIdentityButton" type="button">Continuar para o Veriff</button>
+                <button class="btn primary" id="continueIdentityButton" type="button">Continuar para o Didit</button>
               </div>
             </div>
           </div>
@@ -1917,6 +1927,7 @@
   const closeIdentityModalButton = document.querySelector("#closeIdentityModalButton");
   const cancelIdentityModalButton = document.querySelector("#cancelIdentityModalButton");
   const continueIdentityButton = document.querySelector("#continueIdentityButton");
+  const diditVerificationFrame = document.querySelector("#diditVerificationFrame");
   let identityCameraStream = null;
 
   function getStoredAccessToken() {
@@ -2001,8 +2012,8 @@
       return "Não consegui criar o app OAuth. Rode a SQL de apps OAuth no Supabase e tente de novo.";
     }
 
-    if (text.toLowerCase().includes("veriff_identity_not_configured")) {
-      return "Veriff ainda não está configurado no backend. Configure VERIFF_API_KEY e VERIFF_SHARED_SECRET e publique novamente.";
+    if (text.toLowerCase().includes("didit_identity_not_configured")) {
+      return "Didit ainda não está configurado no backend. Configure DIDIT_API_KEY, DIDIT_WORKFLOW_ID e DIDIT_WEBHOOK_SECRET e publique novamente.";
     }
 
     if (text.toLowerCase().includes("supabase_service_role_required")) {
@@ -2278,15 +2289,15 @@
     badge.classList.toggle("red", status === "canceled" || status === "failed");
 
     if (!state.identityEnabled) {
-      text.textContent = "Veriff ainda não está configurado no backend.";
+      text.textContent = "Didit ainda não está configurado no backend.";
     } else if (isVerified) {
       text.textContent = "Identidade confirmada com documento, captura pela câmera e selfie.";
     } else if (status === "processing") {
-      text.textContent = "A verificação foi enviada e está sendo processada pelo Veriff.";
+      text.textContent = "A verificação foi enviada e está sendo processada pelo Didit.";
     } else if (status === "failed") {
-      text.textContent = "A verificação não foi concluída. Inicie uma nova tentativa pelo Veriff.";
+      text.textContent = "A verificação não foi concluída. Inicie uma nova tentativa pelo Didit.";
     } else {
-      text.textContent = "Verifique sua identidade com documento, captura pela câmera e selfie pelo Veriff.";
+      text.textContent = "Verifique sua identidade com documento, captura pela câmera e selfie pelo Didit.";
     }
 
     if (startIdentityButton) {
@@ -2711,7 +2722,7 @@
     }
 
     if (params.get("identity") === "return") {
-      showToast("Voltamos do Veriff. Atualizando status da verificação...");
+      showToast("Voltamos do Didit. Atualizando status da verificação...");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
@@ -2907,6 +2918,10 @@
     identityModal?.classList.add("hidden");
     identityModal?.setAttribute("aria-hidden", "true");
     stopIdentityCamera();
+    diditVerificationFrame?.classList.add("hidden");
+    if (diditVerificationFrame) diditVerificationFrame.src = "about:blank";
+    document.querySelector(".identity-modal-grid")?.classList.remove("hidden");
+    if (continueIdentityButton) continueIdentityButton.disabled = false;
   }
 
   async function openIdentityModal() {
@@ -2918,7 +2933,7 @@
 
     if (!navigator.mediaDevices?.getUserMedia) {
       if (identityCameraPlaceholder) {
-        identityCameraPlaceholder.textContent = "A prévia da câmera não está disponível neste navegador. Você ainda pode continuar pelo Veriff.";
+        identityCameraPlaceholder.textContent = "A prévia da câmera não está disponível neste navegador. Você ainda pode continuar pelo Didit.";
       }
       return;
     }
@@ -2932,7 +2947,7 @@
       identityCameraPlaceholder?.classList.add("hidden");
     } catch (error) {
       if (identityCameraPlaceholder) {
-        identityCameraPlaceholder.textContent = "Não foi possível abrir a câmera. Você pode continuar e concluir a captura no Veriff.";
+        identityCameraPlaceholder.textContent = "Não foi possível abrir a câmera. Você pode continuar e concluir a captura no Didit.";
       }
     }
   }
@@ -2960,24 +2975,19 @@
       renderAccount();
 
       if (data.url) {
-        if (window.veriffSDK?.createVeriffFrame) {
-          window.veriffSDK.createVeriffFrame({
-            url: data.url,
-            lang: "pt-BR",
-            onEvent: (event) => {
-              const eventName = String(event || "").toLowerCase();
-              if (["submitted", "finished", "canceled"].some((name) => eventName.includes(name))) {
-                loadIdentityStatus();
-              }
-            }
-          });
+        stopIdentityCamera();
+        const modalGrid = document.querySelector(".identity-modal-grid");
+        modalGrid?.classList.add("hidden");
+        if (diditVerificationFrame) {
+          diditVerificationFrame.src = data.url;
+          diditVerificationFrame.classList.remove("hidden");
         } else {
           window.location.href = data.url;
         }
         return;
       }
 
-      showToast("Sessão de verificação criada, mas o Veriff não retornou uma URL.");
+      showToast("Sessão de verificação criada, mas o Didit não retornou uma URL.");
     } catch (error) {
       showToast(error.message);
       if (error.message === "mfa_required") await loadMfaStatus();
@@ -2991,7 +3001,6 @@
   closeIdentityModalButton?.addEventListener("click", closeIdentityModal);
   cancelIdentityModalButton?.addEventListener("click", closeIdentityModal);
   continueIdentityButton?.addEventListener("click", async () => {
-    closeIdentityModal();
     await beginIdentityVerification();
   });
 
