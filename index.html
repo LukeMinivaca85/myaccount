@@ -758,6 +758,10 @@
       align-items: stretch;
     }
 
+    .identity-modal-grid.document-mode {
+      grid-template-columns: 1fr;
+    }
+
     .didit-verification-frame {
       width: 100%;
       min-height: 680px;
@@ -2984,6 +2988,8 @@
     diditVerificationFrame?.classList.add("hidden");
     if (diditVerificationFrame) diditVerificationFrame.src = "about:blank";
     document.querySelector(".identity-modal-grid")?.classList.remove("hidden");
+    document.querySelector(".identity-modal-grid")?.classList.remove("document-mode");
+    identityModal?.querySelector(".camera-stage")?.classList.remove("hidden");
     if (continueIdentityButton) continueIdentityButton.disabled = false;
   }
 
@@ -2991,8 +2997,12 @@
     identityVerificationType = type;
     if (!identityModal) return beginIdentityVerification(type);
 
+    const cameraStage = identityModal.querySelector(".camera-stage");
+    const modalGrid = identityModal.querySelector(".identity-modal-grid");
     const title = document.querySelector("#identityModalTitle");
     const description = identityModal.querySelector(".identity-modal-head p");
+    const firstStepTitle = identityModal.querySelector(".identity-step:nth-child(1) h3");
+    const firstStep = identityModal.querySelector(".identity-step:nth-child(1) p");
     const documentStep = identityModal.querySelector(".identity-step:nth-child(2) p");
     if (title) title.textContent = type === "document" ? "Verificação com documento" : "Verificação facial";
     if (description) description.textContent = type === "document"
@@ -3009,10 +3019,21 @@
     if (reasonStep) reasonStep.textContent = type === "document"
       ? "Para cumprir requisitos legais aplicáveis e ajudar a manter sua conta segura."
       : "A captura e a análise acontecem no fluxo seguro de verificação.";
+    if (cameraStage) cameraStage.classList.toggle("hidden", type === "document");
+    if (modalGrid) modalGrid.classList.toggle("document-mode", type === "document");
+    if (firstStepTitle) firstStepTitle.textContent = type === "document" ? "Prepare seu documento" : "Tenha luz no rosto";
+    if (firstStep) firstStep.textContent = type === "document"
+      ? "Tenha o documento oficial em mãos e siga as instruções exibidas no fluxo seguro."
+      : "Fique em um lugar iluminado e sem outra pessoa no quadro.";
 
     identityModal.classList.remove("hidden");
     identityModal.setAttribute("aria-hidden", "false");
     identityCameraPlaceholder?.classList.remove("hidden");
+
+    if (type === "document") {
+      stopIdentityCamera();
+      return;
+    }
 
     if (!navigator.mediaDevices?.getUserMedia) {
       if (identityCameraPlaceholder) {
