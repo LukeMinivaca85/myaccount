@@ -7,7 +7,7 @@
   <title>Lukintosh Accounts</title>
   <meta name="description" content="Lukintosh Accounts — secure sign-in, account access, sessions, devices and identity settings for Lukintosh services." />
   <meta name="theme-color" content="#050507" />
-  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.veriff.me/incontext/js/v2.5.0/veriff.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -541,9 +541,37 @@
 
     .mini-profile strong,
     .id-user strong {
-      display: block;
       font-size: 14px;
       letter-spacing: -0.02em;
+    }
+
+    .name-line {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .identity-diamond-badge {
+      width: 17px;
+      height: 17px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: #07100b;
+      background: linear-gradient(145deg, #f6fff9 10%, #8cf0bb 48%, #35b87a 100%);
+      border: 1px solid rgba(255,255,255,.82);
+      border-radius: 5px;
+      box-shadow: 0 0 16px rgba(110,231,168,.34);
+      transform: rotate(45deg);
+      font-size: 9px;
+      line-height: 1;
+    }
+
+    .identity-diamond-badge::after {
+      content: "◆";
+      transform: rotate(-45deg);
+      font-size: 8px;
     }
 
     .mini-profile span,
@@ -1452,7 +1480,7 @@
       <div class="mini-profile">
         <div class="avatar" id="sidebarInitial">L</div>
         <div>
-          <strong id="sidebarName">Carregando...</strong>
+          <div class="name-line"><strong id="sidebarName">Carregando...</strong><span class="identity-diamond-badge hidden" id="sidebarVerificationBadge" role="img" aria-label="Identidade verificada" title="Identidade verificada"></span></div>
           <span id="sidebarEmail">Carregando...</span>
         </div>
       </div>
@@ -1501,7 +1529,7 @@
               <div class="id-user">
                 <div class="avatar big" id="mainInitial">L</div>
                 <div>
-                  <strong id="accountName">Carregando...</strong>
+                  <div class="name-line"><strong id="accountName">Carregando...</strong><span class="identity-diamond-badge hidden" id="accountVerificationBadge" role="img" aria-label="Identidade verificada" title="Identidade verificada"></span></div>
                   <span id="accountEmail">Carregando...</span>
                 </div>
               </div>
@@ -1586,7 +1614,7 @@
             <div class="setting-row">
               <div>
                 <h3>Verificação por vídeo</h3>
-                <p id="identityStatusText">Verifique sua identidade com documento, captura pela câmera e selfie pelo Stripe Identity.</p>
+                <p id="identityStatusText">Verifique sua identidade com documento, captura pela câmera e selfie pelo Veriff.</p>
               </div>
 
               <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
@@ -1624,19 +1652,19 @@
                   </div>
                   <div class="identity-step">
                     <span class="identity-step-number">2</span>
-                    <div><h3>Use um documento válido</h3><p>O Stripe pode solicitar documento e selfie durante a verificação.</p></div>
+                    <div><h3>Use um documento válido</h3><p>O Veriff pode solicitar documento e selfie durante a verificação.</p></div>
                   </div>
                   <div class="identity-step">
                     <span class="identity-step-number">3</span>
-                    <div><h3>Continue no Stripe</h3><p>A captura e a análise acontecem no ambiente oficial do Stripe Identity.</p></div>
+                    <div><h3>Continue no Veriff</h3><p>A captura e a análise acontecem no fluxo oficial do Veriff.</p></div>
                   </div>
-                  <p class="identity-modal-note">A prévia não é gravada pelo My Account. O vídeo, imagens e documentos ficam sob o fluxo oficial do Stripe.</p>
+                  <p class="identity-modal-note">A prévia não é gravada pelo My Account. O vídeo, imagens e documentos ficam sob o fluxo oficial do Veriff.</p>
                 </div>
               </div>
 
               <div class="identity-modal-actions">
                 <button class="btn" id="cancelIdentityModalButton" type="button">Agora não</button>
-                <button class="btn primary" id="continueIdentityButton" type="button">Continuar para o Stripe</button>
+                <button class="btn primary" id="continueIdentityButton" type="button">Continuar para o Veriff</button>
               </div>
             </div>
           </div>
@@ -1838,7 +1866,6 @@
     mfa: null,
     identityVerification: null,
     identityEnabled: false,
-    stripePublishableKey: "",
     currentMfaFactorId: null,
     currentVerifiedMfaFactorId: null,
     pendingEmailChallenge: null,
@@ -1974,8 +2001,8 @@
       return "Não consegui criar o app OAuth. Rode a SQL de apps OAuth no Supabase e tente de novo.";
     }
 
-    if (text.toLowerCase().includes("stripe_identity_not_configured")) {
-      return "Stripe Identity ainda não está configurado no backend. Configure STRIPE_SECRET_KEY e publique novamente.";
+    if (text.toLowerCase().includes("veriff_identity_not_configured")) {
+      return "Veriff ainda não está configurado no backend. Configure VERIFF_API_KEY e VERIFF_SHARED_SECRET e publique novamente.";
     }
 
     if (text.toLowerCase().includes("supabase_service_role_required")) {
@@ -2190,6 +2217,11 @@
     document.querySelector("#accountName").textContent = displayName;
     document.querySelector("#accountEmail").textContent = `${email} · Entrou com ${lastProvider}`;
 
+    const identityVerified = Boolean(account?.identityVerification?.verified);
+    ["#sidebarVerificationBadge", "#accountVerificationBadge"].forEach((selector) => {
+      document.querySelector(selector)?.classList.toggle("hidden", !identityVerified);
+    });
+
     renderAvatar("#sidebarInitial", user, initial);
     renderAvatar("#mainInitial", user, initial);
 
@@ -2204,8 +2236,8 @@
 
     const verifiedBadge = document.querySelector("#verifiedBadge");
 
-    verifiedBadge.textContent = account?.identityVerification?.verified
-      ? "● Identity verified"
+    verifiedBadge.textContent = identityVerified
+      ? "◆ Identity verified"
       : account?.verified
         ? `● ${lastProvider}`
         : "● Email pending";
@@ -2246,15 +2278,15 @@
     badge.classList.toggle("red", status === "canceled" || status === "failed");
 
     if (!state.identityEnabled) {
-      text.textContent = "Stripe Identity ainda não está configurado no backend.";
+      text.textContent = "Veriff ainda não está configurado no backend.";
     } else if (isVerified) {
       text.textContent = "Identidade confirmada com documento, captura pela câmera e selfie.";
     } else if (status === "processing") {
-      text.textContent = "A verificação foi enviada e está sendo processada pelo Stripe.";
+      text.textContent = "A verificação foi enviada e está sendo processada pelo Veriff.";
     } else if (status === "failed") {
-      text.textContent = "A verificação não foi concluída. Inicie uma nova tentativa pelo Stripe.";
+      text.textContent = "A verificação não foi concluída. Inicie uma nova tentativa pelo Veriff.";
     } else {
-      text.textContent = "Verifique sua identidade com documento, captura pela câmera e selfie pelo Stripe Identity.";
+      text.textContent = "Verifique sua identidade com documento, captura pela câmera e selfie pelo Veriff.";
     }
 
     if (startIdentityButton) {
@@ -2601,7 +2633,6 @@
     try {
       const data = await api("/api/identity/status");
       state.identityEnabled = Boolean(data.enabled);
-      state.stripePublishableKey = data.publishableKey || "";
       state.identityVerification = data.identityVerification || null;
 
       if (state.account) {
@@ -2622,7 +2653,6 @@
       return data;
     } catch (error) {
       state.identityEnabled = false;
-      state.stripePublishableKey = "";
       renderIdentity();
       console.warn("Identity status failed:", error.message);
       return null;
@@ -2667,7 +2697,6 @@
       state.mfa = null;
       state.identityVerification = null;
       state.identityEnabled = false;
-      state.stripePublishableKey = "";
       showAuth();
     }
   }
@@ -2682,7 +2711,7 @@
     }
 
     if (params.get("identity") === "return") {
-      showToast("Voltamos do Stripe. Atualizando status da verificação...");
+      showToast("Voltamos do Veriff. Atualizando status da verificação...");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
@@ -2889,7 +2918,7 @@
 
     if (!navigator.mediaDevices?.getUserMedia) {
       if (identityCameraPlaceholder) {
-        identityCameraPlaceholder.textContent = "A prévia da câmera não está disponível neste navegador. Você ainda pode continuar pelo Stripe.";
+        identityCameraPlaceholder.textContent = "A prévia da câmera não está disponível neste navegador. Você ainda pode continuar pelo Veriff.";
       }
       return;
     }
@@ -2903,7 +2932,7 @@
       identityCameraPlaceholder?.classList.add("hidden");
     } catch (error) {
       if (identityCameraPlaceholder) {
-        identityCameraPlaceholder.textContent = "Não foi possível abrir a câmera. Você pode continuar e concluir a captura no Stripe.";
+        identityCameraPlaceholder.textContent = "Não foi possível abrir a câmera. Você pode continuar e concluir a captura no Veriff.";
       }
     }
   }
@@ -2930,29 +2959,25 @@
       renderIdentity();
       renderAccount();
 
-      if (data.clientSecret && (state.stripePublishableKey || data.publishableKey)) {
-        if (typeof window.Stripe !== "function") {
-          throw new Error("Stripe.js não carregou. Atualize a página e tente novamente.");
-        }
-
-        const stripe = window.Stripe(
-          state.stripePublishableKey || data.publishableKey
-        );
-        const result = await stripe.verifyIdentity(data.clientSecret);
-
-        if (result.error) throw new Error(result.error.message);
-
-        await loadIdentityStatus();
-        showToast("Verificação enviada. O Stripe está processando o resultado.");
-        return;
-      }
-
       if (data.url) {
-        window.location.href = data.url;
+        if (window.veriffSDK?.createVeriffFrame) {
+          window.veriffSDK.createVeriffFrame({
+            url: data.url,
+            lang: "pt-BR",
+            onEvent: (event) => {
+              const eventName = String(event || "").toLowerCase();
+              if (["submitted", "finished", "canceled"].some((name) => eventName.includes(name))) {
+                loadIdentityStatus();
+              }
+            }
+          });
+        } else {
+          window.location.href = data.url;
+        }
         return;
       }
 
-      showToast("Sessão de verificação criada, mas o Stripe não retornou uma URL.");
+      showToast("Sessão de verificação criada, mas o Veriff não retornou uma URL.");
     } catch (error) {
       showToast(error.message);
       if (error.message === "mfa_required") await loadMfaStatus();
