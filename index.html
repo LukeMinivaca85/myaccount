@@ -758,10 +758,6 @@
       align-items: stretch;
     }
 
-    .identity-modal-grid.document-mode {
-      grid-template-columns: 1fr;
-    }
-
     .didit-verification-frame {
       width: 100%;
       min-height: 680px;
@@ -1651,14 +1647,6 @@
               </div>
 
               <div class="identity-modal-grid">
-                <div class="camera-stage">
-                  <video id="identityCameraPreview" autoplay muted playsinline aria-label="Prévia da câmera"></video>
-                  <div class="camera-placeholder" id="identityCameraPlaceholder">
-                    <p>Permita o acesso à câmera para conferir o enquadramento antes de continuar.</p>
-                  </div>
-                  <div class="camera-guide" aria-hidden="true"></div>
-                </div>
-
                 <div class="identity-steps">
                   <div class="identity-step">
                     <span class="identity-step-number">1</span>
@@ -1932,13 +1920,10 @@
   const startDocumentIdentityButton = document.querySelector("#startDocumentIdentityButton");
   const refreshIdentityButton = document.querySelector("#refreshIdentityButton");
   const identityModal = document.querySelector("#identityModal");
-  const identityCameraPreview = document.querySelector("#identityCameraPreview");
-  const identityCameraPlaceholder = document.querySelector("#identityCameraPlaceholder");
   const closeIdentityModalButton = document.querySelector("#closeIdentityModalButton");
   const cancelIdentityModalButton = document.querySelector("#cancelIdentityModalButton");
   const continueIdentityButton = document.querySelector("#continueIdentityButton");
   const diditVerificationFrame = document.querySelector("#diditVerificationFrame");
-  let identityCameraStream = null;
   let identityVerificationType = "face";
 
   function getStoredAccessToken() {
@@ -2975,21 +2960,12 @@
     showToast("Exemplo do botão copiado.");
   });
 
-  function stopIdentityCamera() {
-    identityCameraStream?.getTracks().forEach((track) => track.stop());
-    identityCameraStream = null;
-    if (identityCameraPreview) identityCameraPreview.srcObject = null;
-  }
-
   function closeIdentityModal() {
     identityModal?.classList.add("hidden");
     identityModal?.setAttribute("aria-hidden", "true");
-    stopIdentityCamera();
     diditVerificationFrame?.classList.add("hidden");
     if (diditVerificationFrame) diditVerificationFrame.src = "about:blank";
     document.querySelector(".identity-modal-grid")?.classList.remove("hidden");
-    document.querySelector(".identity-modal-grid")?.classList.remove("document-mode");
-    identityModal?.querySelector(".camera-stage")?.classList.remove("hidden");
     if (continueIdentityButton) continueIdentityButton.disabled = false;
   }
 
@@ -2997,8 +2973,6 @@
     identityVerificationType = type;
     if (!identityModal) return beginIdentityVerification(type);
 
-    const cameraStage = identityModal.querySelector(".camera-stage");
-    const modalGrid = identityModal.querySelector(".identity-modal-grid");
     const title = document.querySelector("#identityModalTitle");
     const description = identityModal.querySelector(".identity-modal-head p");
     const firstStepTitle = identityModal.querySelector(".identity-step:nth-child(1) h3");
@@ -3019,8 +2993,6 @@
     if (reasonStep) reasonStep.textContent = type === "document"
       ? "Para cumprir requisitos legais aplicáveis e ajudar a manter sua conta segura."
       : "A captura e a análise acontecem no fluxo seguro de verificação.";
-    if (cameraStage) cameraStage.classList.toggle("hidden", type === "document");
-    if (modalGrid) modalGrid.classList.toggle("document-mode", type === "document");
     if (firstStepTitle) firstStepTitle.textContent = type === "document" ? "Prepare seu documento" : "Tenha luz no rosto";
     if (firstStep) firstStep.textContent = type === "document"
       ? "Tenha o documento oficial em mãos e siga as instruções exibidas no fluxo seguro."
@@ -3028,32 +3000,6 @@
 
     identityModal.classList.remove("hidden");
     identityModal.setAttribute("aria-hidden", "false");
-    identityCameraPlaceholder?.classList.remove("hidden");
-
-    if (type === "document") {
-      stopIdentityCamera();
-      return;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      if (identityCameraPlaceholder) {
-        identityCameraPlaceholder.textContent = "A prévia da câmera não está disponível neste navegador. Você ainda pode continuar pelo Didit.";
-      }
-      return;
-    }
-
-    try {
-      identityCameraStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false
-      });
-      if (identityCameraPreview) identityCameraPreview.srcObject = identityCameraStream;
-      identityCameraPlaceholder?.classList.add("hidden");
-    } catch (error) {
-      if (identityCameraPlaceholder) {
-        identityCameraPlaceholder.textContent = "Não foi possível abrir a câmera. Você pode continuar e concluir a captura no Didit.";
-      }
-    }
   }
 
   async function beginIdentityVerification(type = identityVerificationType) {
@@ -3081,7 +3027,6 @@
       renderAccount();
 
       if (data.url) {
-        stopIdentityCamera();
         const modalGrid = document.querySelector(".identity-modal-grid");
         modalGrid?.classList.add("hidden");
         if (diditVerificationFrame) {
